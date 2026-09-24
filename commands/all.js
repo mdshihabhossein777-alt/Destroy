@@ -105,6 +105,183 @@ async function sendWithGif(api, event, body, gifKey, mentions = []) {
         api.sendMessage({ body, mentions }, event.threadID);
     }
 }
+                   //vido download funcation
+
+// ==================== VIDEO DOWNLOAD HELPERS ====================
+
+// YouTube
+async function downloadYouTube(url, tempFile) {
+    const ytdl = require('@distube/ytdl-core');
+    const info = await ytdl.getInfo(url);
+    const title = info.videoDetails.title || "YouTube Video";
+
+    return new Promise((resolve, reject) => {
+        const stream = ytdl(url, {
+            quality: 'highest',
+            filter: 'audioandvideo'
+        });
+        const writeStream = fs.createWriteStream(tempFile);
+        stream.pipe(writeStream);
+        writeStream.on('finish', () => resolve(title));
+        writeStream.on('error', reject);
+        stream.on('error', reject);
+    });
+}
+
+// Facebook
+async function downloadFacebook(url, tempFile) {
+    const response = await axios.get(url, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        timeout: 15000
+    });
+    const html = response.data;
+
+    let videoUrl = null;
+    const patterns = [
+        /"playable_url_quality_hd":"([^"]+)"/,
+        /"playable_url":"([^"]+)"/,
+        /hd_src:"([^"]+)"/,
+        /sd_src:"([^"]+)"/
+    ];
+
+    for (const pattern of patterns) {
+        const match = html.match(pattern);
+        if (match) {
+            videoUrl = match[1];
+            break;
+        }
+    }
+
+    if (!videoUrl) throw new Error("No video URL found");
+
+    videoUrl = videoUrl.replace(/\\u0025/g, '%').replace(/\\\//g, '/');
+
+    const videoRes = await axios.get(videoUrl, {
+        responseType: 'stream',
+        timeout: 60000,
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+
+    return new Promise((resolve, reject) => {
+        const writeStream = fs.createWriteStream(tempFile);
+        videoRes.data.pipe(writeStream);
+        writeStream.on('finish', () => resolve("Facebook Video"));
+        writeStream.on('error', reject);
+        videoRes.data.on('error', reject);
+    });
+}
+
+// TikTok
+async function downloadTikTok(url, tempFile) {
+    // প্রথমে TikTok API দিয়ে চেষ্টা
+    try {
+        const apiUrl = `https://tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`;
+        const apiRes = await axios.get(apiUrl, { timeout: 15000 });
+
+        if (apiRes.data && apiRes.data.video) {
+            const videoUrl = apiRes.data.video;
+            const videoRes = await axios.get(videoUrl, {
+                responseType: 'stream',
+                timeout: 60000,
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
+
+            return new Promise((resolve, reject) => {
+                const ws = fs.createWriteStream(tempFile);
+                videoRes.data.pipe(ws);
+                ws.on('finish', () => resolve("TikTok Video"));
+                ws.on('error', reject);
+                videoRes.data.on('error', reject);
+            });
+        }
+    } catch (e) {
+        console.log("TikTok API 1 failed, trying fallback...");
+    }
+
+    // দ্বিতীয় API
+    const apiUrl2 = `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`;
+    const apiRes2 = await axios.get(apiUrl2, { timeout: 15000 });
+
+    if (!apiRes2.data || !apiRes2.data.video) {
+        throw new Error("TikTok download failed");
+    }
+
+    const videoUrl = apiRes2.data.video.noWatermark || apiRes2.data.video.watermark;
+    const videoRes = await axios.get(videoUrl, {
+        responseType: 'stream',
+        timeout: 60000,
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+
+    return new Promise((resolve, reject) => {
+        const ws = fs.createWriteStream(tempFile);
+        videoRes.data.pipe(ws);
+        ws.on('finish', () => resolve("TikTok Video"));
+        ws.on('error', reject);
+        videoRes.data.on('error', reject);
+    });
+}
+
+// Instagram
+async function downloadInstagram(url, tempFile) {
+    const response = await axios.get(url, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        timeout: 15000
+    });
+    const html = response.data;
+
+    const match = html.match(/"video_url":"([^"]+)"/);
+    if (!match) throw new Error("No video URL found");
+
+    let videoUrl = match[1].replace(/\\u002F/g, '/').replace(/\\\//g, '/');
+    const videoRes = await axios.get(videoUrl, {
+        responseType: 'stream',
+        timeout: 60000,
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+
+    return new Promise((resolve, reject) => {
+        const ws = fs.createWriteStream(tempFile);
+        videoRes.data.pipe(ws);
+        ws.on('finish', () => resolve("Instagram Video"));
+        ws.on('error', reject);
+        videoRes.data.on('error', reject);
+    });
+}
+
+// Twitter/X
+async function downloadTwitter(url, tempFile) {
+    const response = await axios.get(url, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        timeout: 15000
+    });
+    const html = response.data;
+
+    const match = html.match(/https:\/\/video\.twimg\.com\/[^"]+\.mp4/);
+    if (!match) throw new Error("No video URL found");
+
+    const videoUrl = match[0];
+    const videoRes = await axios.get(videoUrl, {
+        responseType: 'stream',
+        timeout: 60000,
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+
+    return new Promise((resolve, reject) => {
+        const ws = fs.createWriteStream(tempFile);
+        videoRes.data.pipe(ws);
+        ws.on('finish', () => resolve("Twitter Video"));
+        ws.on('error', reject);
+        videoRes.data.on('error', reject);
+    });
+}
+
 
 // ==================== Module Exports ====================
 module.exports = {
@@ -860,11 +1037,132 @@ ${p >= 90 ? "PERFECT COUPLE" : p >= 75 ? "GREAT PAIR" : "GOOD PAIR"}`;
         api.sendMessage("Ghost mode activated for 24 hours.", event.threadID);
     },
 
-    vid: async (api, event, args, config) => {
+       vid: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-        if (!args[0]) return api.sendMessage("Usage: /vid [link]", event.threadID);
-        api.sendMessage("Downloading video...", event.threadID);
+
+        const url = args[0];
+        if (!url) {
+            return api.sendMessage(
+                `📥 Video Downloader
+━━━━━━━━━━━━━━━━━━━━━━━━
+Usage: /vid [video link]
+
+Supported:
+- YouTube
+- Facebook
+- Instagram
+- TikTok
+- Twitter/X
+━━━━━━━━━━━━━━━━━━━━━━━━
+Example: /vid https://youtu.be/dQw4w9WgXcQ`,
+                event.threadID
+            );
+        }
+
+        if (!url.startsWith('http')) {
+            return api.sendMessage("Invalid URL. Must start with http.", event.threadID);
+        }
+
+        // প্রসেসিং মেসেজ
+        const processingMsg = await new Promise(r => {
+            api.sendMessage("⏳ Downloading video... Please wait.", event.threadID, (err, info) => r(info));
+        });
+
+        const tempFile = `./temp_${Date.now()}.mp4`;
+
+        try {
+            let videoBuffer = null;
+            let videoTitle = "Video";
+            let platform = "Unknown";
+
+            // ============ YouTube ============
+            if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                platform = "YouTube";
+                videoTitle = await downloadYouTube(url, tempFile);
+                videoBuffer = fs.readFileSync(tempFile);
+            }
+            // ============ Facebook ============
+            else if (url.includes('facebook.com') || url.includes('fb.watch')) {
+                platform = "Facebook";
+                videoTitle = await downloadFacebook(url, tempFile);
+                videoBuffer = fs.readFileSync(tempFile);
+            }
+            // ============ TikTok ============
+            else if (url.includes('tiktok.com')) {
+                platform = "TikTok";
+                videoTitle = await downloadTikTok(url, tempFile);
+                videoBuffer = fs.readFileSync(tempFile);
+            }
+            // ============ Instagram ============
+            else if (url.includes('instagram.com')) {
+                platform = "Instagram";
+                videoTitle = await downloadInstagram(url, tempFile);
+                videoBuffer = fs.readFileSync(tempFile);
+            }
+            // ============ Twitter/X ============
+            else if (url.includes('twitter.com') || url.includes('x.com')) {
+                platform = "Twitter/X";
+                videoTitle = await downloadTwitter(url, tempFile);
+                videoBuffer = fs.readFileSync(tempFile);
+            }
+            else {
+                api.unsendMessage(processingMsg.messageID);
+                return api.sendMessage("Unsupported platform.", event.threadID);
+            }
+
+            // ফাইল সাইজ চেক (২৫ MB লিমিট)
+            const fileSizeMB = (videoBuffer.length / (1024 * 1024)).toFixed(2);
+            if (videoBuffer.length > 25 * 1024 * 1024) {
+                api.unsendMessage(processingMsg.messageID);
+                if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+                return api.sendMessage(
+                    `❌ Video too large: ${fileSizeMB} MB\nFacebook limit: 25 MB`,
+                    event.threadID
+                );
+            }
+
+            // প্রসেসিং মেসেজ মুছে ফেলা
+            api.unsendMessage(processingMsg.messageID);
+
+            // ============ গ্রুপে ভিডিও পাঠানো ============
+            const caption = `📥 Downloaded from ${platform}
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎬 ${videoTitle}
+📦 Size: ${fileSizeMB} MB
+━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+            // Stream তৈরি করে পাঠানো (সবচেয়ে নির্ভরযোগ্য)
+            const videoStream = fs.createReadStream(tempFile);
+
+            api.sendMessage({
+                body: caption,
+                attachment: videoStream
+            }, event.threadID, (err, info) => {
+                // টেম্প ফাইল মুছে ফেলা
+                setTimeout(() => {
+                    if (fs.existsSync(tempFile)) {
+                        try { fs.unlinkSync(tempFile); } catch (e) {}
+                    }
+                }, 5000);
+
+                if (err) {
+                    console.error("Video send error:", err);
+                    api.sendMessage(
+                        `❌ Failed to send video.\nError: ${err.message || "Unknown"}\n\nFile may be too large or unsupported format.`,
+                        event.threadID
+                    );
+                } else {
+                    console.log(`[vid] Video sent successfully to ${event.threadID}`);
+                }
+            });
+
+        } catch (err) {
+            console.error("vid error:", err);
+            api.unsendMessage(processingMsg.messageID);
+            if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+            api.sendMessage(`❌ Download failed: ${err.message}`, event.threadID);
+        }
     },
 
     // ==================== BOT ADMIN ====================
