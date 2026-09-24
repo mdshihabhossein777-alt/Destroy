@@ -1,15 +1,14 @@
 {
-  "groups": {},
-  "users": {},
-  "warnings": {},
-  "banned": {
-    "902413072587606": [
-      "100070055914744",
-      "100070055914744"
-    ]
-  },
-  "settings": {
-    "autoKick": true,
-    "botLock": false
-  }
+    "groups": {},
+    "users": {},
+    "warnings": {},
+    "banned": {},
+    "activity": {},
+    "settings": {
+        "botLock": false,
+        "autoKick": false,
+        "darkMode": false,
+        "antiLink": false,
+        "maintenance": false
+    }
 }
