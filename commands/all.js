@@ -96,6 +96,155 @@ async function sendWithGif(api, event, body, gifKey, mentions = []) {
         api.sendMessage({ body, mentions }, event.threadID);
     }
 }
+//           guess gender//
+
+// ==================== Smart Gender Detection ====================
+// এটি নাম থেকে জেন্ডার অনুমান করে — কোনো ম্যানুয়াল লিস্ট লাগে না
+
+function guessGender(name) {
+    if (!name) return null;
+
+    const lowerName = name.toLowerCase().trim();
+    const parts = lowerName.split(/\s+/);
+
+    // ==================== নিয়ম ১: শেষ অংশ ====================
+    // মেয়েদের উপাধি (সবসময় মেয়ে)
+    const femaleEndings = [
+        "akter", "akhtar", "aktar", "khatun", "khaton", "begum",
+        "sultana", "banu", "bano", "nesa", "nessa", "khanam",
+        "sultana", "ara", "sultana", "bibi", "bibi"
+    ];
+
+    const lastPart = parts[parts.length - 1];
+    for (const ending of femaleEndings) {
+        if (lastPart === ending || lastPart.includes(ending)) {
+            return "female";
+        }
+    }
+
+    // ছেলেদের উপাধি (সবসময় ছেলে)
+    const maleEndings = [
+        "islam", "hasan", "hossain", "hosen", "husain", "rahman",
+        "rahim", "karim", "kader", "ahmed", "ali", "khan",
+        "chowdhury", "sarker", "sikder", "miah", "mia", "bhuiyan",
+        "haque", "haq", "hoque", "uddin", "ullah", "ahamed", "ahmad"
+    ];
+
+    for (const ending of maleEndings) {
+        if (lastPart === ending || lastPart.includes(ending)) {
+            return "male";
+        }
+    }
+
+    // ==================== নিয়ম ২: প্রথম অংশ ====================
+    const firstPart = parts[0];
+    const malePrefixes = [
+        "md", "mohammad", "mohammed", "muhammad", "mahmud",
+        "abdul", "abdur", "abdus", "abul", "abu",
+        "sk", "sheikh", "shekh", "syed", "sayed", "sayeed"
+    ];
+
+    for (const prefix of malePrefixes) {
+        if (firstPart === prefix) {
+            return "male";
+        }
+    }
+
+    // ==================== নিয়ম ৩: নামের শেষ অক্ষর ====================
+    // বাংলা নামে মেয়েদের নাম প্রায়ই "a", "i", "ee" দিয়ে শেষ হয়
+    // যেমন: Riya, Priya, Tania, Mita, Rita, Shilpi, Rumi
+    const femaleNameEndings = [
+        "ya", "ia", "ea", "pa", "ta", "na", "ma", "ra", "la", "ka",
+        "sha", "ja", "ha", "wa", "ira", "a", "i", "ee", "y"
+    ];
+    
+    // নামের শেষ অংশের শেষ অক্ষর চেক
+    if (firstPart.length > 3) {
+        if (firstPart.endsWith("a") || firstPart.endsWith("i") || 
+            firstPart.endsWith("ya") || firstPart.endsWith("ia") ||
+            firstPart.endsWith("ee")) {
+            return "female";
+        }
+    }
+
+    // ==================== নিয়ম ৪: কমন নাম প্যাটার্ন ====================
+    // "Rahman", "Hasan", "Islam" দিয়ে শেষ হলে ছেলে
+    const commonMaleSuffix = ["an", "in", "ul", "ur", "ib", "ad"];
+    
+    if (firstPart.length > 4) {
+        // "Rakib", "Rasel", "Rifat" → ছেলে
+        if (firstPart.startsWith("ra") && !firstPart.endsWith("a")) {
+            // Rakib, Rasel, Rifat, Raju, Rana → ছেলে
+            if (!firstPart.endsWith("iya")) {
+                return "male";
+            }
+        }
+        // "Sumaiya", "Sumaya", "Samira" → মেয়ে
+        if (firstPart.startsWith("su") || firstPart.startsWith("sa")) {
+            if (firstPart.endsWith("a") || firstPart.endsWith("ya")) {
+                return "female";
+            }
+        }
+        // "Tasnim", "Tanvir" → Tasnim মেয়ে, Tanvir ছেলে
+        if (firstPart.startsWith("tas")) {
+            if (firstPart.endsWith("im")) return "female";
+            return "male";
+        }
+        // "Shah", "Shakib", "Shanto" → ছেলে
+        if (firstPart.startsWith("sha")) {
+            if (firstPart.endsWith("kib") || firstPart.endsWith("nto") ||
+                firstPart.endsWith("hid") || firstPart.endsWith("hin") ||
+                firstPart.endsWith("hab") || firstPart.endsWith("d")) {
+                return "male";
+            }
+            if (firstPart.endsWith("rmin") || firstPart.endsWith("bnam") ||
+                firstPart.endsWith("bana") || firstPart.endsWith("hana") ||
+                firstPart.endsWith("rmin")) {
+                return "female";
+            }
+        }
+    }
+
+    // ==================== নিয়ম ৫: সবচেয়ে কমন নাম ====================
+    const commonFemaleNames = [
+        "riya", "priya", "puja", "pooja", "tania", "tania", "mita", "rita",
+        "rumi", "shilpi", "shila", "sima", "tisha", "trisha", "nipa", "mou",
+        "rumi", "sathi", "mim", "sumi", "sumaiya", "tasnim", "nusrat",
+        "jannat", "sadia", "sanjida", "farzana", "farhana", "parvin",
+        "nasrin", "sharmin", "shabnam", "ayesha", "aisha", "fatema",
+        "mariam", "maryam", "sumaiya", "urf", "urmi", "urna", "rukaiya",
+        "fahima", "fahmida", "khadija", "sultana", "nasreen", "yasmin",
+        "yesmin", "tasnia", "tamanna", "papiya", "mousumi", "nishi",
+        "nishat", "zarin", "zarina", "zeba"
+    ];
+
+    const commonMaleNames = [
+        "rakib", "rasel", "rafi", "rafsan", "raju", "rana", "rony",
+        "shakib", "sakib", "shihab", "arif", "arafat", "ayan", "ayon",
+        "sabbir", "shahin", "shahid", "sohel", "sujon", "sumon",
+        "tanvir", "tonmoy", "tuhin", "tarek", "wasim", "yasin",
+        "yeasin", "yousuf", "zahid", "zaman", "sohag", "shanto",
+        "santo", "hasib", "emon", "emran", "imran", "ibrahim",
+        "ismail", "jubayer", "junaid", "omar", "omor", "faruk",
+        "farhan", "fahim", "faisal", "hridoy", "sakib", "shanto"
+    ];
+
+    for (const commonName of commonFemaleNames) {
+        if (lowerName.includes(commonName)) {
+            return "female";
+        }
+    }
+
+    for (const commonName of commonMaleNames) {
+        if (lowerName.includes(commonName)) {
+            return "male";
+        }
+    }
+
+    return null; // অনুমান করা যায়নি
+}
+
+
 
 // ==================== Module Exports ====================
 module.exports = {
@@ -616,9 +765,10 @@ Example:
     },
 
     // ==================== PAIR (Boy + Girl Only) ====================
-    pair: async (api, event) => {
+       pair: async (api, event) => {
         try {
             const threadID = event.threadID;
+            const senderID = event.senderID;
             const db = getDB();
 
             const info = await new Promise(r => api.getThreadInfo(threadID, (e, i) => r(e ? null : i)));
@@ -633,10 +783,12 @@ Example:
             if (!db.groups[threadID]) db.groups[threadID] = {};
             if (!db.groups[threadID].genders) db.groups[threadID].genders = {};
 
-            const savedGenders = db.groups[threadID].genders || {};
+            const savedGenders = db.groups[threadID].genders;
 
+            // সব মেম্বারের জেন্ডার অটো ডিটেক্ট
             const maleList = [];
             const femaleList = [];
+            let updated = false;
 
             for (const memberID of members) {
                 if (savedGenders[memberID]) {
@@ -647,38 +799,82 @@ Example:
 
                 try {
                     const userInfo = await new Promise(r => api.getUserInfo(memberID, (e, ret) => r(e ? null : ret[memberID])));
-                    if (userInfo && userInfo.gender) {
-                        if (userInfo.gender === 2) maleList.push(memberID);
-                        else if (userInfo.gender === 1) femaleList.push(memberID);
+                    if (!userInfo || !userInfo.name) continue;
+
+                    let gender = null;
+
+                    // ফেসবুকের gender চেক (১=female, ২=male)
+                    if (userInfo.gender === 2) gender = "male";
+                    else if (userInfo.gender === 1) gender = "female";
+                    
+                    // না পেলে নাম থেকে অনুমান
+                    if (!gender) {
+                        gender = guessGender(userInfo.name);
+                    }
+
+                    if (gender) {
+                        savedGenders[memberID] = gender;
+                        updated = true;
+                        if (gender === "male") maleList.push(memberID);
+                        else if (gender === "female") femaleList.push(memberID);
                     }
                 } catch (e) {}
             }
 
-            if (maleList.length === 0 || femaleList.length === 0) {
+            if (updated) {
+                db.groups[threadID].genders = savedGenders;
+                saveDB(db);
+            }
+
+            // কমান্ডদাতার জেন্ডার
+            const senderGender = savedGenders[senderID];
+            const senderInfo = await new Promise(r => api.getUserInfo(senderID, (e, ret) => r(e ? { name: "You" } : ret[senderID])));
+            const senderName = senderInfo.name || "You";
+
+            if (!senderGender) {
                 return api.sendMessage(
-                    `⚠️ Cannot find a boy-girl pair!
+                    `⚠️ Cannot detect your gender!
 ━━━━━━━━━━━━━━━━━━━━━━
-👦 Males  : ${maleList.length}
-👧 Females: ${femaleList.length}
+👤 Name: ${senderName}
 ━━━━━━━━━━━━━━━━━━━━━━
-Use /setgender to register members:
-/setgender @user male
-/setgender @user female`,
+Your name pattern is unknown.
+
+Set manually:
+/setgender @yourself male
+/setgender @yourself female`,
                     threadID
                 );
             }
 
-            const boy = maleList[Math.floor(Math.random() * maleList.length)];
-            const girl = femaleList[Math.floor(Math.random() * femaleList.length)];
+            // বিপরীত লিঙ্গ থেকে পেয়ার
+            let partnerList = (senderGender === "male") 
+                ? femaleList.filter(id => id !== senderID)
+                : maleList.filter(id => id !== senderID);
 
-            const boyInfo = await new Promise(r => api.getUserInfo(boy, (e, ret) => r(e ? { name: "Unknown" } : ret[boy])));
-            const girlInfo = await new Promise(r => api.getUserInfo(girl, (e, ret) => r(e ? { name: "Unknown" } : ret[girl])));
+            if (partnerList.length === 0) {
+                const oppositeGender = senderGender === "male" ? "Girls" : "Boys";
+                return api.sendMessage(
+                    `⚠️ No ${oppositeGender} available in the group!
+━━━━━━━━━━━━━━━━━━━━━━
+👤 You: ${senderName} (${senderGender})
+━━━━━━━━━━━━━━━━━━━━━━
+Ask more ${oppositeGender.toLowerCase()} to join.`,
+                    threadID
+                );
+            }
+
+            const partnerID = partnerList[Math.floor(Math.random() * partnerList.length)];
+            const partnerInfo = await new Promise(r => api.getUserInfo(partnerID, (e, ret) => r(e ? { name: "Unknown" } : ret[partnerID])));
 
             const comp = Math.floor(Math.random() * 41) + 60;
 
-            const msg = `💕 Matchmaking Complete 💕
+            let msg;
+            if (senderGender === "male") {
+                msg = `💕 Matchmaking Complete 💕
 ━━━━━━━━━━━━━━━━━━━━━━━━
-👦 ${boyInfo.name}  ❤️  👧 ${girlInfo.name}
+👦 ${senderName}
+        ❤️
+👧 ${partnerInfo.name}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 💌 Destiny has written your names together 💌
 💫 May your bond last forever ✨
@@ -687,13 +883,29 @@ Use /setgender to register members:
 ${comp >= 90 ? "🔥 PERFECT MATCH!" : comp >= 75 ? "💕 GREAT MATCH!" : "💖 GOOD MATCH!"}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 💘 A beautiful couple made in heaven 💘`;
+            } else {
+                msg = `💕 Matchmaking Complete 💕
+━━━━━━━━━━━━━━━━━━━━━━━━
+👧 ${senderName}
+        ❤️
+👦 ${partnerInfo.name}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💌 Destiny has written your names together 💌
+💫 May your bond last forever ✨
+
+💖 Compatibility: ${comp}%
+${comp >= 90 ? "🔥 PERFECT MATCH!" : comp >= 75 ? "💕 GREAT MATCH!" : "💖 GOOD MATCH!"}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💘 A beautiful couple made in heaven 💘`;
+            }
 
             const mentions = [
-                { tag: boyInfo.name, id: boy },
-                { tag: girlInfo.name, id: girl }
+                { tag: senderName, id: senderID },
+                { tag: partnerInfo.name, id: partnerID }
             ];
 
             await sendWithGif(api, event, msg, 'pair', mentions);
+
         } catch (e) {
             console.error("pair error:", e);
             api.sendMessage("❌ Pair failed.", event.threadID);
