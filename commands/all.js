@@ -141,89 +141,177 @@ async function sendWithGif(api, event, body, gifKey, mentions = []) {
 module.exports = {
 
     // ==================== Core ====================
-    help: async (api, event, args, config) => {
+       help: async (api, event, args, config) => {
         try {
             const senderID = event.senderID;
+            const threadID = event.threadID;
+
+            // ==================== 1. ইউজারের রোল ====================
             const perm = await checkPermission(api, event, config, 0);
-            const info = await new Promise(r => api.getUserInfo(senderID, (e, ret) => r(e ? { name: "Unknown" } : ret[senderID])));
+            const userInfo = await new Promise(r => api.getUserInfo(senderID, (e, ret) => r(e ? { name: "Unknown" } : ret[senderID])));
 
-            let publicCmds = `
-------------------------------
-Public Commands
-------------------------------
-Core: /help /ping /uid /owner
-Economy: /balance /daily /work /gamble /slots /rob /shop /buy
-Fun: /hug /kiss /slap /pat /dance /cry /laugh /pair /ship /truth /dare /roast /top`;
+            // ==================== 2. গ্রুপ তথ্য ====================
+            const threadInfo = await new Promise(r => api.getThreadInfo(threadID, (e, i) => r(e ? null : i)));
+            const groupName = threadInfo?.threadName || "Unknown Group";
+            const memberCount = threadInfo?.participantIDs?.length || 0;
+            const adminCount = threadInfo?.adminIDs?.length || 0;
 
-            let adminCmds = `
-------------------------------
-Group Admin Only
-------------------------------
-/kick /ban /warn
-/tagall /tagadmin /members /adminlist /groupinfo
-/lock /unlock /autokick /antlink /dark
-/say /poll /autonick /resetnick /setallnick`;
+            // ==================== 3. গ্রুপ অ্যাডমিনের নাম ====================
+            let adminNames = "None";
+            if (threadInfo?.adminIDs && threadInfo.adminIDs.length > 0) {
+                const names = [];
+                for (const a of threadInfo.adminIDs.slice(0, 3)) {
+                    const u = await new Promise(r => api.getUserInfo(a.id, (e, ret) => r(e ? { name: "Unknown" } : ret[a.id])));
+                    names.push(u.name);
+                }
+                adminNames = names.join(", ");
+                if (threadInfo.adminIDs.length > 3) {
+                    adminNames += ` +${threadInfo.adminIDs.length - 3} more`;
+                }
+            }
 
-            let botAdminCmds = `
-------------------------------
-Bot Admin Only
-------------------------------
-/status /maintenance /botadmins`;
+            // ==================== 4. Rules ====================
+            const db = getDB();
+            const rules = db.groups[threadID]?.rules || "No rules set yet";
 
-            let ownerCmds = `
-------------------------------
-Owner Only
-------------------------------
-/addadmin /removeadmin /restart`;
+            // ==================== 5. ইউজারের Credit ====================
+            const user = getUser(db, senderID);
+            const coins = user.coins || 0;
 
-            let extra = "";
-            if (perm.userLevel >= 1) extra += adminCmds;
-            if (perm.userLevel >= 2) extra += botAdminCmds;
-            if (perm.userLevel >= 3) extra += ownerCmds;
+            // ==================== 6. Help Message ====================
+            const helpMsg = `
+╔══════════════════════════════════════╗
+     💀 DEAD DESTROYER 💀 — HELP
+╚══════════════════════════════════════╝
 
-            const msg = `${config.botName}
-${config.version} - Help Menu
+[ 01 ] USER INFORMATION
+──────────────────────────────
+Name   : ${userInfo.name}
+UID    : ${senderID}
+Role   : ${perm.userRole}
+Credit : ${coins} coins
 
-Name: ${info.name}
-ID: ${senderID}
-Role: ${perm.userRole}${publicCmds}${extra}
+[ 02 ] GROUP INFORMATION
+──────────────────────────────
+Group  : ${groupName}
+Members: ${memberCount}
+Admins : ${adminCount}
+Admin  : ${adminNames}
 
-------------------------------
-Developer: ${config.developer}`;
+[ 03 ] GROUP RULES
+──────────────────────────────
+${rules}
 
-            await sendWithGif(api, event, msg, 'help');
+[ 04 ] COMMAND LIST
+──────────────────────────────
+CORE
+  1. /help    - Command list
+  2. /ping    - Bot status
+  3. /uid     - Your ID
+  4. /owner   - Owner info
+
+GROUP
+  5. /groupinfo - Group details
+  6. /adminlist - Admin list
+  7. /members   - Member count
+  8. /tagall    - Tag everyone
+  9. /tagadmin  - Tag admins
+ 10. /rules     - View rules
+ 11. /setrules  - Set rules
+
+MODERATION
+ 12. /kick @user   - Kick user
+ 13. /ban @user    - Ban user
+ 14. /warn @user   - Warn user
+ 15. /inactive     - Inactive list
+ 16. /autokick     - Auto kick
+ 17. /lock         - Lock bot
+ 18. /unlock       - Unlock bot
+
+NICKNAME
+ 19. /autonick @user [name] - Set nickname
+ 20. /resetnick @user        - Reset nickname
+ 21. /setallnick [name]      - Set all nicknames
+
+ANIME GIF
+ 22. /hug @user   - Hug GIF
+ 23. /kiss @user  - Kiss GIF
+ 24. /slap @user  - Slap GIF
+ 25. /pat @user   - Pat GIF
+ 26. /dance       - Dance GIF
+ 27. /cry         - Cry GIF
+ 28. /laugh       - Laugh GIF
+
+ECONOMY
+ 29. /balance     - Check coins
+ 30. /daily       - Claim 500 coins
+ 31. /work        - Earn 100-300
+ 32. /gamble [amt]- Gamble coins
+ 33. /slots [amt] - Slot game
+ 34. /rob @user   - Steal coins
+ 35. /shop        - Shop items
+ 36. /buy [item]  - Buy item
+ 37. /top         - Top 5 users
+
+FUN
+ 38. /pair        - Random pair
+ 39. /ship        - Love calculator
+ 40. /truth       - Truth question
+ 41. /dare        - Dare challenge
+ 42. /roast       - Roast someone
+
+UTILITY
+ 43. /say [text]  - Bot says text
+ 44. /poll [text] - Create poll
+ 45. /ghost       - Ghost mode
+ 46. /vid [link]  - Download video
+
+BOT ADMIN
+ 47. /status      - System status
+ 48. /maintenance - Maintenance mode
+ 49. /botadmins   - Bot admin list
+
+OWNER
+ 50. /addadmin @user    - Add bot admin
+ 51. /removeadmin @user - Remove bot admin
+ 52. /restart           - Restart bot
+
+[ 05 ] HOW TO USE
+──────────────────────────────
+1. Type /help to see this menu
+2. Type /balance to check coins
+3. Type /daily for daily reward
+4. Type /pair to find a match
+5. Type "bot active" to check bot
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💀 DEAD DESTROYER ${config.version}
+👨‍💻 Developer: ${config.developer}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+            // ==================== 7. Itachi Anime GIF ====================
+            const itachiGifs = [
+                "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif",
+                "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
+                "https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif",
+                "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif",
+                "https://media.giphy.com/media/3o7TKMt1VVNkHV2PaE/giphy.gif"
+            ];
+            const itachiGif = itachiGifs[Math.floor(Math.random() * itachiGifs.length)];
+
+            try {
+                const res = await axios.get(itachiGif, { responseType: 'stream' });
+                api.sendMessage({
+                    body: helpMsg,
+                    attachment: res.data
+                }, threadID);
+            } catch (e) {
+                api.sendMessage(helpMsg, threadID);
+            }
+
         } catch (err) {
             console.error("help error:", err);
             api.sendMessage("Help menu failed to load.", event.threadID);
-        }
-    },
-
-    ping: (api, event) => {
-        const start = Date.now();
-        api.sendMessage("Pong", event.threadID, () => {
-            api.sendMessage(`Response: ${Date.now() - start}ms`, event.threadID);
-        });
-    },
-
-    owner: async (api, event, args, config) => {
-        const info = await new Promise(r => api.getUserInfo(config.owner, (e, ret) => r(e ? { name: "Unknown" } : ret[config.owner])));
-        api.sendMessage(`Owner: ${info.name}\nID: ${config.owner}\nDeveloper: ${config.developer}`, event.threadID);
-    },
-
-    uid: async (api, event) => {
-        try {
-            const mentions = Object.keys(event.mentions || {});
-            if (mentions.length > 0) {
-                for (const id of mentions) {
-                    const name = event.mentions[id].replace('@', '');
-                    api.sendMessage(`${name}\nID: ${id}\nProfile: https://facebook.com/${id}`, event.threadID);
-                }
-            } else {
-                const info = await new Promise(r => api.getUserInfo(event.senderID, (e, ret) => r(e ? { name: "Unknown" } : ret[event.senderID])));
-                api.sendMessage(`Your ID: ${event.senderID}\nName: ${info.name}\nProfile: https://facebook.com/${event.senderID}`, event.threadID);
-            }
-        } catch (e) {
-            api.sendMessage("Failed to load ID.", event.threadID);
         }
     },
 
