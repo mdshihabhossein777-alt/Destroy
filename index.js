@@ -37,12 +37,14 @@ try {
 
 // ==================== Welcome/Left GIFs ====================
 const welcomeGifs = [
-    "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
-    "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
+    "https://media.tenor.com/9W3qZfY3XwAAAAAC/anime-welcome.gif",
+    "https://media.tenor.com/5K2zXfV3W0AAAAAC/welcome-anime.gif",
+    "https://media.tenor.com/L3qY2zFvX0AAAAAC/anime-hello.gif"
 ];
 const leftGifs = [
-    "https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif",
-    "https://media.giphy.com/media/OPU6wzx8JrHna/giphy.gif"
+    "https://media.tenor.com/8W3qY2zfX0AAAAAC/anime-goodbye.gif",
+    "https://media.tenor.com/2Z4vX3WfY0AAAAAC/sad-goodbye-anime.gif",
+    "https://media.tenor.com/B3qYzV2fX0AAAAAC/wave-goodbye.gif"
 ];
 
 const lastMsg = {};

@@ -2,7 +2,7 @@ const fs = require('fs');
 const axios = require('axios');
 const dbFile = './database.json';
 
-// ==================== Database Helpers ====================
+// ==================== Database ====================
 function getDB() {
     try {
         return JSON.parse(fs.readFileSync(dbFile, 'utf8'));
@@ -21,7 +21,7 @@ function getUser(db, id) {
     return db.users[id];
 }
 
-// ==================== Permission Checker ====================
+// ==================== Permission ====================
 async function checkPermission(api, event, config, requiredLevel) {
     const senderID = event.senderID;
     const threadID = event.threadID;
@@ -47,92 +47,89 @@ async function checkPermission(api, event, config, requiredLevel) {
 }
 
 function sendPermissionDenied(api, event, requiredLevel) {
-    const levelNames = { 1: "Group Admin", 2: "Bot Admin", 3: "Owner" };
-    api.sendMessage(
-        `Permission denied.\nRequired: ${levelNames[requiredLevel]}\nYour role: User`,
-        event.threadID
-    );
+    const levels = { 1: "Group Admin", 2: "Bot Admin", 3: "Owner" };
+    api.sendMessage(`Permission denied.\nRequired: ${levels[requiredLevel]}\nYour role: User`, event.threadID);
 }
 
-// ==================== GIF Libraries ====================
-// ==================== 🎬 Anime & Emotional GIF Library ====================
-const gifLib = {
+// ==================== Anime GIF Library (High Quality) ====================
+const GIFS = {
     help: [
-        "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
-        "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif",
-        "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif"
+        "https://media.tenor.com/x8v1oNUOmg4AAAAC/itachi-naruto.gif",
+        "https://media.tenor.com/6n6sJZ2o3WAAAAAC/itachi-uchiha.gif",
+        "https://media.tenor.com/VlYdVjwfWQ8AAAAC/itachi-sharingan.gif",
+        "https://media.tenor.com/7JcWsWvY3KAAAAAC/itachi-anime.gif"
     ],
     hug: [
-        "https://media.giphy.com/media/l2QDM9Jnim1YVILXa/giphy.gif",
-        "https://media.giphy.com/media/3o7abB06u9bNzA8lu8/giphy.gif",
-        "https://media.giphy.com/media/od5H3PmEG5EVq/giphy.gif",
-        "https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif"
+        "https://media.tenor.com/9B2-jZ7FKW0AAAAC/anime-hug.gif",
+        "https://media.tenor.com/LF3P5YjR3r4AAAAC/anime-hug-couple.gif",
+        "https://media.tenor.com/qN5B3z2zR7MAAAAC/anime-hug-cute.gif",
+        "https://media.tenor.com/8OZ7nFhU8Z4AAAAC/hug-anime.gif"
     ],
     kiss: [
-        "https://media.giphy.com/media/G3va31o04lMKM/giphy.gif",
-        "https://media.giphy.com/media/11k3uN9S0F7Xy8/giphy.gif",
-        "https://media.giphy.com/media/3o6ZsYm5xYc0NhyWsw/giphy.gif"
+        "https://media.tenor.com/CQkQ7J4N2X0AAAAC/anime-kiss.gif",
+        "https://media.tenor.com/FUc8M1Nr7PAAAAAC/anime-kiss-love.gif",
+        "https://media.tenor.com/3wqVfzLd3X0AAAAC/anime-kiss-cute.gif"
     ],
     slap: [
-        "https://media.giphy.com/media/Gf3AUz3eBNbTW/giphy.gif",
-        "https://media.giphy.com/media/Zau0yrl17uzdK/giphy.gif",
-        "https://media.giphy.com/media/3o6Zt6ML6BklcajjsA/giphy.gif"
+        "https://media.tenor.com/6B3vN_P0yLAAAAAC/anime-slap.gif",
+        "https://media.tenor.com/vQ3Z3FjLt0kAAAAC/anime-slap-cat.gif",
+        "https://media.tenor.com/W5Kz_fR8XqMAAAAC/anime-slap-angry.gif"
     ],
     pat: [
-        "https://media.giphy.com/media/109ltuoSQT212w/giphy.gif",
-        "https://media.giphy.com/media/ARSp9T7wwxNcs/giphy.gif",
-        "https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif"
+        "https://media.tenor.com/qVzVfEqB3L0AAAAC/anime-pat.gif",
+        "https://media.tenor.com/8Y3N4bFvL2MAAAAC/anime-pat-cute.gif",
+        "https://media.tenor.com/vN3qWfYp2Z0AAAAC/head-pat-anime.gif"
     ],
     dance: [
-        "https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif",
-        "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
-        "https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif"
+        "https://media.tenor.com/8vY3Z4XbK0kAAAAC/anime-dance.gif",
+        "https://media.tenor.com/B2vNjKv3zF4AAAAC/anime-dancing.gif",
+        "https://media.tenor.com/2sYxF5KzY2AAAAAC/naruto-dance.gif"
     ],
     cry: [
-        "https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif",
-        "https://media.giphy.com/media/OPU6wzx8JrHna/giphy.gif",
-        "https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif",
-        "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif"
+        "https://media.tenor.com/8HZ3vXfK2Z4AAAAC/anime-cry.gif",
+        "https://media.tenor.com/LXzK7wV3Q3QAAAAC/anime-sad.gif",
+        "https://media.tenor.com/Bv3Y2zFqXp0AAAAC/anime-crying.gif"
     ],
     laugh: [
-        "https://media.giphy.com/media/10JhviFuU2gWD6/giphy.gif",
-        "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif",
-        "https://media.giphy.com/media/3o6Zt8Me0j9kaZLLXG/giphy.gif"
+        "https://media.tenor.com/5WzVf3XzF2AAAAAC/anime-laugh.gif",
+        "https://media.tenor.com/K3wXzVfW3F0AAAAC/anime-happy.gif",
+        "https://media.tenor.com/Z2vXzY3FW0AAAAAC/anime-smile.gif"
     ],
     pair: [
-        "https://media.giphy.com/media/od5H3PmEG5EVq/giphy.gif",
-        "https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif",
-        "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
-        "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
+        "https://media.tenor.com/XkZ3qWfN7B0AAAAC/anime-love-couple.gif",
+        "https://media.tenor.com/LvY3nFjW6W0AAAAC/anime-couple.gif",
+        "https://media.tenor.com/5K3vXfY3Z4MAAAAC/romantic-anime.gif",
+        "https://media.tenor.com/Z4vNfW3BqW0AAAAC/anime-love.gif"
     ],
     ship: [
-        "https://media.giphy.com/media/G3va31o04lMKM/giphy.gif",
-        "https://media.giphy.com/media/l2QDM9Jnim1YVILXa/giphy.gif",
-        "https://media.giphy.com/media/11k3uN9S0F7Xy8/giphy.gif"
+        "https://media.tenor.com/8K3zVfW2XwAAAAAC/anime-love-heart.gif",
+        "https://media.tenor.com/2Z4vF3WqY2AAAAAC/valentine-anime.gif",
+        "https://media.tenor.com/W3qYzVf2X0AAAAAC/couple-anime.gif"
     ],
     welcome: [
-        "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
-        "https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif",
-        "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
+        "https://media.tenor.com/9W3qZfY3XwAAAAAC/anime-welcome.gif",
+        "https://media.tenor.com/5K2zXfV3W0AAAAAC/welcome-anime.gif",
+        "https://media.tenor.com/L3qY2zFvX0AAAAAC/anime-hello.gif"
     ],
     goodbye: [
-        "https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif",
-        "https://media.giphy.com/media/OPU6wzx8JrHna/giphy.gif",
-        "https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif"
+        "https://media.tenor.com/8W3qY2zfX0AAAAAC/anime-goodbye.gif",
+        "https://media.tenor.com/2Z4vX3WfY0AAAAAC/sad-goodbye-anime.gif",
+        "https://media.tenor.com/B3qYzV2fX0AAAAAC/wave-goodbye.gif"
     ]
 };
 
 function pickGif(key) {
-    const arr = gifLib[key] || gifLib.help;
+    const arr = GIFS[key] || GIFS.help;
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
 async function sendWithGif(api, event, body, gifKey, mentions = []) {
     try {
-        const gif = pickGif(gifKey);
-        const res = await axios.get(gif, { responseType: 'stream' });
+        const gifUrl = pickGif(gifKey);
+        const res = await axios.get(gifUrl, { responseType: 'stream', timeout: 8000 });
         api.sendMessage({ body, mentions, attachment: res.data }, event.threadID);
     } catch (e) {
+        // GIF fail হলে শুধু টেক্সট
         api.sendMessage({ body, mentions }, event.threadID);
     }
 }
@@ -140,23 +137,19 @@ async function sendWithGif(api, event, body, gifKey, mentions = []) {
 // ==================== Module Exports ====================
 module.exports = {
 
-    // ==================== Core ====================
-       help: async (api, event, args, config) => {
+    // ==================== HELP ====================
+    help: async (api, event, args, config) => {
         try {
             const senderID = event.senderID;
             const threadID = event.threadID;
-
-            // ==================== 1. ইউজারের রোল ====================
             const perm = await checkPermission(api, event, config, 0);
             const userInfo = await new Promise(r => api.getUserInfo(senderID, (e, ret) => r(e ? { name: "Unknown" } : ret[senderID])));
-
-            // ==================== 2. গ্রুপ তথ্য ====================
+            
             const threadInfo = await new Promise(r => api.getThreadInfo(threadID, (e, i) => r(e ? null : i)));
             const groupName = threadInfo?.threadName || "Unknown Group";
             const memberCount = threadInfo?.participantIDs?.length || 0;
             const adminCount = threadInfo?.adminIDs?.length || 0;
 
-            // ==================== 3. গ্রুপ অ্যাডমিনের নাম ====================
             let adminNames = "None";
             if (threadInfo?.adminIDs && threadInfo.adminIDs.length > 0) {
                 const names = [];
@@ -165,157 +158,144 @@ module.exports = {
                     names.push(u.name);
                 }
                 adminNames = names.join(", ");
-                if (threadInfo.adminIDs.length > 3) {
-                    adminNames += ` +${threadInfo.adminIDs.length - 3} more`;
-                }
+                if (threadInfo.adminIDs.length > 3) adminNames += ` +${threadInfo.adminIDs.length - 3}`;
             }
 
-            // ==================== 4. Rules ====================
             const db = getDB();
             const rules = db.groups[threadID]?.rules || "No rules set yet";
-
-            // ==================== 5. ইউজারের Credit ====================
             const user = getUser(db, senderID);
-            const coins = user.coins || 0;
 
-            // ==================== 6. Help Message ====================
             const helpMsg = `
-╔══════════════════════════════════════╗
-     💀 DEAD DESTROYER 💀 — HELP
-╚══════════════════════════════════════╝
+╔══════════════════════════════════╗
+   DEAD DESTROYER - HELP MENU
+╚══════════════════════════════════╝
 
-[ 01 ] USER INFORMATION
-──────────────────────────────
-Name   : ${userInfo.name}
-UID    : ${senderID}
-Role   : ${perm.userRole}
-Credit : ${coins} coins
+[ 01 ] USER INFO
+──────────────────────────────────
+Name    : ${userInfo.name}
+UID     : ${senderID}
+Role    : ${perm.userRole}
+Credit  : ${user.coins} coins
 
-[ 02 ] GROUP INFORMATION
-──────────────────────────────
-Group  : ${groupName}
-Members: ${memberCount}
-Admins : ${adminCount}
-Admin  : ${adminNames}
+[ 02 ] GROUP INFO
+──────────────────────────────────
+Group   : ${groupName}
+Members : ${memberCount}
+Admins  : ${adminCount}
+Admin   : ${adminNames}
 
-[ 03 ] GROUP RULES
-──────────────────────────────
+[ 03 ] RULES
+──────────────────────────────────
 ${rules}
 
 [ 04 ] COMMAND LIST
-──────────────────────────────
+──────────────────────────────────
 CORE
-  1. /help    - Command list
+  1. /help    - This menu
   2. /ping    - Bot status
   3. /uid     - Your ID
   4. /owner   - Owner info
 
-GROUP
-  5. /groupinfo - Group details
-  6. /adminlist - Admin list
-  7. /members   - Member count
-  8. /tagall    - Tag everyone
-  9. /tagadmin  - Tag admins
- 10. /rules     - View rules
- 11. /setrules  - Set rules
+GROUP (Admin+)
+  5. /groupinfo  6. /adminlist
+  7. /members    8. /tagall
+  9. /tagadmin   10. /rules
+ 11. /setrules
 
-MODERATION
- 12. /kick @user   - Kick user
- 13. /ban @user    - Ban user
- 14. /warn @user   - Warn user
- 15. /inactive     - Inactive list
- 16. /autokick     - Auto kick
- 17. /lock         - Lock bot
- 18. /unlock       - Unlock bot
+MODERATION (Admin+)
+ 12. /kick @user    13. /ban @user
+ 14. /warn @user    15. /inactive
+ 16. /autokick      17. /lock
+ 18. /unlock
 
-NICKNAME
- 19. /autonick @user [name] - Set nickname
- 20. /resetnick @user        - Reset nickname
- 21. /setallnick [name]      - Set all nicknames
+NICKNAME (Admin+)
+ 19. /autonick @user [name]
+ 20. /resetnick @user
+ 21. /setallnick [name]
 
 ANIME GIF
- 22. /hug @user   - Hug GIF
- 23. /kiss @user  - Kiss GIF
- 24. /slap @user  - Slap GIF
- 25. /pat @user   - Pat GIF
- 26. /dance       - Dance GIF
- 27. /cry         - Cry GIF
- 28. /laugh       - Laugh GIF
+ 22. /hug @user   23. /kiss @user
+ 24. /slap @user  25. /pat @user
+ 26. /dance       27. /cry
+ 28. /laugh
 
 ECONOMY
- 29. /balance     - Check coins
- 30. /daily       - Claim 500 coins
- 31. /work        - Earn 100-300
- 32. /gamble [amt]- Gamble coins
- 33. /slots [amt] - Slot game
- 34. /rob @user   - Steal coins
- 35. /shop        - Shop items
- 36. /buy [item]  - Buy item
- 37. /top         - Top 5 users
+ 29. /balance     30. /daily
+ 31. /work        32. /gamble [amt]
+ 33. /slots [amt] 34. /rob @user
+ 35. /shop        36. /buy [item]
+ 37. /top
 
 FUN
- 38. /pair        - Random pair
- 39. /ship        - Love calculator
- 40. /truth       - Truth question
- 41. /dare        - Dare challenge
- 42. /roast       - Roast someone
+ 38. /pair        39. /ship
+ 40. /truth       41. /dare
+ 42. /roast
 
 UTILITY
- 43. /say [text]  - Bot says text
- 44. /poll [text] - Create poll
- 45. /ghost       - Ghost mode
- 46. /vid [link]  - Download video
+ 43. /say [text]  44. /poll [text]
+ 45. /ghost       46. /vid [link]
 
 BOT ADMIN
- 47. /status      - System status
- 48. /maintenance - Maintenance mode
- 49. /botadmins   - Bot admin list
+ 47. /status      48. /maintenance
+ 49. /botadmins
 
 OWNER
- 50. /addadmin @user    - Add bot admin
- 51. /removeadmin @user - Remove bot admin
- 52. /restart           - Restart bot
+ 50. /addadmin @user
+ 51. /removeadmin @user
+ 52. /restart
 
 [ 05 ] HOW TO USE
-──────────────────────────────
-1. Type /help to see this menu
-2. Type /balance to check coins
-3. Type /daily for daily reward
-4. Type /pair to find a match
-5. Type "bot active" to check bot
+──────────────────────────────────
+- Type /help for menu
+- Type /balance for coins
+- Type /daily for reward
+- Type /pair for matchmaking
+- Type "bot active" to check
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💀 DEAD DESTROYER ${config.version}
-👨‍💻 Developer: ${config.developer}
+DEAD DESTROYER ${config.version}
+Developer: ${config.developer}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
-            // ==================== 7. Itachi Anime GIF ====================
-            const itachiGifs = [
-                "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif",
-                "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
-                "https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif",
-                "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif",
-                "https://media.giphy.com/media/3o7TKMt1VVNkHV2PaE/giphy.gif"
-            ];
-            const itachiGif = itachiGifs[Math.floor(Math.random() * itachiGifs.length)];
-
-            try {
-                const res = await axios.get(itachiGif, { responseType: 'stream' });
-                api.sendMessage({
-                    body: helpMsg,
-                    attachment: res.data
-                }, threadID);
-            } catch (e) {
-                api.sendMessage(helpMsg, threadID);
-            }
-
+            await sendWithGif(api, event, helpMsg, 'help');
         } catch (err) {
             console.error("help error:", err);
-            api.sendMessage("Help menu failed to load.", event.threadID);
+            api.sendMessage("Help menu failed.", event.threadID);
         }
     },
 
-    // ==================== Group Info ====================
+    ping: (api, event) => {
+        const start = Date.now();
+        api.sendMessage("Pong", event.threadID, () => {
+            api.sendMessage(`Response: ${Date.now() - start}ms`, event.threadID);
+        });
+    },
+
+    owner: async (api, event, args, config) => {
+        const info = await new Promise(r => api.getUserInfo(config.owner, (e, ret) => r(e ? { name: "Unknown" } : ret[config.owner])));
+        api.sendMessage(`Owner: ${info.name}\nID: ${config.owner}\nDeveloper: ${config.developer}`, event.threadID);
+    },
+
+    // ==================== UID (Fixed) ====================
+    uid: async (api, event, args) => {
+        try {
+            const mentions = Object.keys(event.mentions || {});
+            if (mentions.length > 0) {
+                for (const id of mentions) {
+                    const name = event.mentions[id].replace('@', '');
+                    api.sendMessage(`Name: ${name}\nUID: ${id}\nProfile: https://facebook.com/${id}`, event.threadID);
+                }
+            } else {
+                const info = await new Promise(r => api.getUserInfo(event.senderID, (e, ret) => r(e ? { name: "Unknown" } : ret[event.senderID])));
+                api.sendMessage(`Your Name: ${info.name}\nYour UID: ${event.senderID}\nProfile: https://facebook.com/${event.senderID}`, event.threadID);
+            }
+        } catch (e) {
+            console.error("uid error:", e);
+            api.sendMessage("Failed to load UID.", event.threadID);
+        }
+    },
+
+    // ==================== GROUP ====================
     groupinfo: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
@@ -366,7 +346,7 @@ OWNER
         if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
         db.groups[event.threadID].rules = args.join(" ") || "No rules set.";
         saveDB(db);
-        api.sendMessage("Rules have been updated.", event.threadID);
+        api.sendMessage("Rules updated.", event.threadID);
     },
 
     tagall: async (api, event, args, config) => {
@@ -410,7 +390,7 @@ OWNER
         }
     },
 
-    // ==================== Moderation ====================
+    // ==================== MODERATION ====================
     kick: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
@@ -418,7 +398,7 @@ OWNER
         if (!target) return api.sendMessage("Usage: /kick @user", event.threadID);
         const reason = args.filter(a => !a.startsWith('@')).join(" ") || "No reason";
         api.removeUserFromGroup(target, event.threadID, (err) => {
-            if (err) return api.sendMessage("Failed to kick. Bot needs to be admin.", event.threadID);
+            if (err) return api.sendMessage("Failed to kick. Bot needs admin.", event.threadID);
             api.sendMessage(`User kicked. Reason: ${reason}`, event.threadID);
         });
     },
@@ -432,7 +412,7 @@ OWNER
         if (!db.banned[event.threadID]) db.banned[event.threadID] = [];
         db.banned[event.threadID].push(target);
         saveDB(db);
-        api.sendMessage("User has been banned.", event.threadID);
+        api.sendMessage("User banned.", event.threadID);
     },
 
     warn: async (api, event, args, config) => {
@@ -488,52 +468,17 @@ OWNER
         api.sendMessage("Bot unlocked.", event.threadID);
     },
 
-    antlink: async (api, event, args, config) => {
-        const perm = await checkPermission(api, event, config, 1);
-        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-        const db = getDB();
-        if (!db.settings) db.settings = {};
-        db.settings.antiLink = args[0] === "on";
-        saveDB(db);
-        api.sendMessage(`Anti Link: ${db.settings.antiLink ? "ON" : "OFF"}`, event.threadID);
-    },
-
-    dark: async (api, event, args, config) => {
-        const perm = await checkPermission(api, event, config, 1);
-        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-        const db = getDB();
-        if (!db.settings) db.settings = {};
-        db.settings.darkMode = !db.settings.darkMode;
-        saveDB(db);
-        api.sendMessage(`Dark Mode: ${db.settings.darkMode ? "ON" : "OFF"}`, event.threadID);
-    },
-
-    say: async (api, event, args, config) => {
-        const perm = await checkPermission(api, event, config, 1);
-        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-        const m = args.join(" ");
-        if (!m) return api.sendMessage("Usage: /say text", event.threadID);
-        api.sendMessage(m, event.threadID);
-    },
-
-    poll: async (api, event, args, config) => {
-        const perm = await checkPermission(api, event, config, 1);
-        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-        const q = args.join(" ") || "Your opinion?";
-        api.sendMessage(`Poll: ${q}\n\nYes / No`, event.threadID);
-    },
-
-    // ==================== Nickname ====================
+    // ==================== NICKNAME ====================
     autonick: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         const target = Object.keys(event.mentions || {})[0];
-        if (!target) return api.sendMessage("Usage: /autonick @user [nickname]", event.threadID);
+        if (!target) return api.sendMessage("Usage: /autonick @user [name]", event.threadID);
         const nickname = args.filter(a => !a.startsWith('@')).join(" ").trim();
         if (!nickname) return api.sendMessage("Please provide a nickname.", event.threadID);
-        if (nickname.length > 30) return api.sendMessage("Nickname must be under 30 characters.", event.threadID);
+        if (nickname.length > 30) return api.sendMessage("Max 30 characters.", event.threadID);
         api.changeNickname(nickname, event.threadID, target, (err) => {
-            if (err) return api.sendMessage("Failed to set nickname. Bot may need admin.", event.threadID);
+            if (err) return api.sendMessage("Failed. Bot may need admin.", event.threadID);
             api.sendMessage(`Nickname set: ${nickname}`, event.threadID);
         });
     },
@@ -544,7 +489,7 @@ OWNER
         const target = Object.keys(event.mentions || {})[0] || args[0];
         if (!target) return api.sendMessage("Usage: /resetnick @user", event.threadID);
         api.changeNickname("", event.threadID, target, (err) => {
-            if (err) return api.sendMessage("Failed to reset.", event.threadID);
+            if (err) return api.sendMessage("Failed.", event.threadID);
             api.sendMessage("Nickname reset.", event.threadID);
         });
     },
@@ -553,10 +498,10 @@ OWNER
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         const nickname = args.join(" ").trim();
-        if (!nickname) return api.sendMessage("Usage: /setallnick [nickname]", event.threadID);
+        if (!nickname) return api.sendMessage("Usage: /setallnick [name]", event.threadID);
         try {
             const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-            if (!info) return api.sendMessage("Failed to load.", event.threadID);
+            if (!info) return api.sendMessage("Failed.", event.threadID);
             api.sendMessage(`Setting nickname for ${info.participantIDs.length} members...`, event.threadID);
             let success = 0, failed = 0;
             for (const id of info.participantIDs) {
@@ -570,29 +515,32 @@ OWNER
             }
             api.sendMessage(`Success: ${success}\nFailed: ${failed}`, event.threadID);
         } catch (e) {
-            api.sendMessage("Something went wrong.", event.threadID);
+            api.sendMessage("Error.", event.threadID);
         }
     },
 
-    // ==================== GIF Fun ====================
+    // ==================== ANIME GIF ====================
     hug: async (api, event) => { await sendWithGif(api, event, "Warm hug", "hug"); },
     kiss: async (api, event) => {
-        const t = Object.keys(event.mentions || {})[0] || "someone";
-        await sendWithGif(api, event, `Kiss for @${t}`, "kiss");
+        const t = Object.keys(event.mentions || {})[0];
+        const name = t ? event.mentions[t].replace('@', '') : "someone";
+        await sendWithGif(api, event, `Kiss for ${name}`, "kiss");
     },
     slap: async (api, event) => {
-        const t = Object.keys(event.mentions || {})[0] || "someone";
-        await sendWithGif(api, event, `Slap for @${t}`, "slap");
+        const t = Object.keys(event.mentions || {})[0];
+        const name = t ? event.mentions[t].replace('@', '') : "someone";
+        await sendWithGif(api, event, `Slap for ${name}`, "slap");
     },
     pat: async (api, event) => {
-        const t = Object.keys(event.mentions || {})[0] || "someone";
-        await sendWithGif(api, event, `Pat for @${t}`, "pat");
+        const t = Object.keys(event.mentions || {})[0];
+        const name = t ? event.mentions[t].replace('@', '') : "someone";
+        await sendWithGif(api, event, `Pat for ${name}`, "pat");
     },
     dance: async (api, event) => { await sendWithGif(api, event, "Bot is dancing", "dance"); },
     cry: async (api, event) => { await sendWithGif(api, event, "Bot is crying", "cry"); },
     laugh: async (api, event) => { await sendWithGif(api, event, "Bot is laughing", "laugh"); },
 
-    // ==================== Economy ====================
+    // ==================== ECONOMY ====================
     balance: (api, event) => {
         const db = getDB();
         const u = getUser(db, event.senderID);
@@ -630,10 +578,10 @@ OWNER
         if (amt > u.coins) return api.sendMessage("Not enough coins.", event.threadID);
         if (Math.random() < 0.5) {
             u.coins += amt;
-            api.sendMessage(`You won ${amt} coins. Total: ${u.coins}`, event.threadID);
+            api.sendMessage(`You won ${amt}. Total: ${u.coins}`, event.threadID);
         } else {
             u.coins -= amt;
-            api.sendMessage(`You lost ${amt} coins. Total: ${u.coins}`, event.threadID);
+            api.sendMessage(`You lost ${amt}. Total: ${u.coins}`, event.threadID);
         }
         saveDB(db);
     },
@@ -643,7 +591,7 @@ OWNER
         const u = getUser(db, event.senderID);
         const amt = parseInt(args[0]) || 100;
         if (amt > u.coins) return api.sendMessage("Not enough coins.", event.threadID);
-        const s = ["cherry", "lemon", "orange", "grape", "gem", "seven"];
+        const s = ["CHERRY", "LEMON", "ORANGE", "GRAPE", "GEM", "SEVEN"];
         const a = s[Math.floor(Math.random() * 6)];
         const b = s[Math.floor(Math.random() * 6)];
         const c = s[Math.floor(Math.random() * 6)];
@@ -664,26 +612,26 @@ OWNER
         const t = Object.keys(event.mentions || {})[0] || args[0];
         if (!t) return api.sendMessage("Usage: /rob @user", event.threadID);
         const tu = getUser(db, t);
-        if (tu.shield) return api.sendMessage("Target has shield. Rob failed.", event.threadID);
+        if (tu.shield) return api.sendMessage("Target has shield.", event.threadID);
         const amt = Math.floor(Math.random() * 500) + 100;
         if (tu.coins < amt) return api.sendMessage("Target has insufficient coins.", event.threadID);
         tu.coins -= amt;
         u.coins += amt;
         saveDB(db);
-        api.sendMessage(`You stole ${amt} coins. Total: ${u.coins}`, event.threadID);
+        api.sendMessage(`You stole ${amt}. Total: ${u.coins}`, event.threadID);
     },
 
     shop: (api, event) => {
         const msg = `SHOP
 ------------------------------
-Shield - 2000 coins
+Shield    - 2000 coins
 Insurance - 3500 coins
-Double - 1500 coins
-VIP - 5000 coins
-Glow - 3000 coins
-Lucky - 1000 coins
-Booster - 1200 coins
-Locker - 4000 coins
+Double    - 1500 coins
+VIP       - 5000 coins
+Glow      - 3000 coins
+Lucky     - 1000 coins
+Booster   - 1200 coins
+Locker    - 4000 coins
 ------------------------------
 Buy: /buy [item]`;
         api.sendMessage(msg, event.threadID);
@@ -702,7 +650,15 @@ Buy: /buy [item]`;
         api.sendMessage(`Purchased ${it}. Remaining: ${u.coins}`, event.threadID);
     },
 
-    // ==================== Fun ====================
+    top: (api, event) => {
+        const db = getDB();
+        const u = Object.entries(db.users).sort((a, b) => (b[1].coins || 0) - (a[1].coins || 0)).slice(0, 5);
+        let msg = "Top Members:\n------------------------------\n";
+        u.forEach((x, i) => { msg += `${i + 1}. ${x[0]}: ${x[1].coins} coins\n`; });
+        api.sendMessage(msg || "No data.", event.threadID);
+    },
+
+    // ==================== FUN ====================
     pair: async (api, event) => {
         try {
             const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
@@ -720,7 +676,7 @@ Buy: /buy [item]`;
 ${n1.name}  +  ${n2.name}
 ------------------------------
 Compatibility: ${comp}%
-${comp >= 90 ? "Perfect Match" : comp >= 75 ? "Great Match" : "Good Match"}`;
+${comp >= 90 ? "PERFECT MATCH" : comp >= 75 ? "GREAT MATCH" : "GOOD MATCH"}`;
 
             const mentions = [
                 { tag: n1.name, id: u1 },
@@ -728,6 +684,7 @@ ${comp >= 90 ? "Perfect Match" : comp >= 75 ? "Great Match" : "Good Match"}`;
             ];
             await sendWithGif(api, event, msg, 'pair', mentions);
         } catch (e) {
+            console.error("pair error:", e);
             api.sendMessage("Pair failed.", event.threadID);
         }
     },
@@ -756,9 +713,10 @@ ${name1}  +  ${name2}
 ------------------------------
 Love: ${p}%
 
-${p >= 90 ? "Perfect Couple" : p >= 75 ? "Great Pair" : "Good Pair"}`;
+${p >= 90 ? "PERFECT COUPLE" : p >= 75 ? "GREAT PAIR" : "GOOD PAIR"}`;
             await sendWithGif(api, event, msg, 'ship');
         } catch (e) {
+            console.error("ship error:", e);
             api.sendMessage("Ship failed.", event.threadID);
         }
     },
@@ -774,16 +732,24 @@ ${p >= 90 ? "Perfect Couple" : p >= 75 ? "Great Pair" : "Good Pair"}`;
     },
 
     roast: (api, event) => {
-        const r = ["You are so smart that Google searches you!", "You have more mistakes than hair on your head!", "You are so slow that even turtles overtake you!"];
+        const r = ["You are so smart Google searches for you!", "You have more mistakes than hair!", "Even turtles overtake you!"];
         api.sendMessage(`Roast: ${r[Math.floor(Math.random() * r.length)]}`, event.threadID);
     },
 
-    top: (api, event) => {
-        const db = getDB();
-        const u = Object.entries(db.users).sort((a, b) => (b[1].coins || 0) - (a[1].coins || 0)).slice(0, 5);
-        let msg = "Top Members:\n------------------------------\n";
-        u.forEach((x, i) => { msg += `${i + 1}. ${x[0]}: ${x[1].coins} coins\n`; });
-        api.sendMessage(msg || "No data.", event.threadID);
+    // ==================== UTILITY ====================
+    say: async (api, event, args, config) => {
+        const perm = await checkPermission(api, event, config, 1);
+        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
+        const m = args.join(" ");
+        if (!m) return api.sendMessage("Usage: /say text", event.threadID);
+        api.sendMessage(m, event.threadID);
+    },
+
+    poll: async (api, event, args, config) => {
+        const perm = await checkPermission(api, event, config, 1);
+        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
+        const q = args.join(" ") || "Your opinion?";
+        api.sendMessage(`Poll: ${q}\n\nYes / No`, event.threadID);
     },
 
     ghost: (api, event) => {
@@ -797,7 +763,7 @@ ${p >= 90 ? "Perfect Couple" : p >= 75 ? "Great Pair" : "Good Pair"}`;
         api.sendMessage("Downloading video...", event.threadID);
     },
 
-    // ==================== Bot Admin ====================
+    // ==================== BOT ADMIN ====================
     status: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 2);
         if (!perm.allowed) return sendPermissionDenied(api, event, 2);
@@ -836,10 +802,10 @@ Bot Admins: ${config.botAdmins?.length || 0}`;
         if (!db.settings) db.settings = {};
         db.settings.maintenance = !db.settings.maintenance;
         saveDB(db);
-        api.sendMessage(`Maintenance Mode: ${db.settings.maintenance ? "ON" : "OFF"}`, event.threadID);
+        api.sendMessage(`Maintenance: ${db.settings.maintenance ? "ON" : "OFF"}`, event.threadID);
     },
 
-    // ==================== Owner ====================
+    // ==================== OWNER ====================
     addadmin: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 3);
         if (!perm.allowed) return sendPermissionDenied(api, event, 3);
@@ -847,10 +813,10 @@ Bot Admins: ${config.botAdmins?.length || 0}`;
         if (!target) return api.sendMessage("Usage: /addadmin @user", event.threadID);
         const newConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
         if (!newConfig.botAdmins) newConfig.botAdmins = [];
-        if (newConfig.botAdmins.includes(target)) return api.sendMessage("Already a bot admin.", event.threadID);
+        if (newConfig.botAdmins.includes(target)) return api.sendMessage("Already admin.", event.threadID);
         newConfig.botAdmins.push(target);
         fs.writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
-        api.sendMessage("User added as bot admin. Restart bot to apply.", event.threadID);
+        api.sendMessage("Bot admin added. Restart to apply.", event.threadID);
     },
 
     removeadmin: async (api, event, args, config) => {
@@ -862,13 +828,13 @@ Bot Admins: ${config.botAdmins?.length || 0}`;
         if (!newConfig.botAdmins) newConfig.botAdmins = [];
         newConfig.botAdmins = newConfig.botAdmins.filter(id => id !== target);
         fs.writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
-        api.sendMessage("User removed from bot admins.", event.threadID);
+        api.sendMessage("Bot admin removed.", event.threadID);
     },
 
     restart: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 3);
         if (!perm.allowed) return sendPermissionDenied(api, event, 3);
-        api.sendMessage("Bot is restarting...", event.threadID, () => process.exit(0));
+        api.sendMessage("Restarting bot...", event.threadID, () => process.exit(0));
     }
 
 };
