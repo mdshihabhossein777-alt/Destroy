@@ -1,25 +1,39 @@
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const http = require('http');
 const login = require('@dongdev/fca-unofficial');
 const config = require('./config.json');
 
+// ==================== 🔑 AppState Load (Local + Render) ====================
 let appState;
 try {
-    appState = JSON.parse(fs.readFileSync('appstate.json', 'utf8'));
+    if (process.env.APPSTATE) {
+        appState = JSON.parse(process.env.APPSTATE);
+        console.log("✅ AppState Render থেকে লোড হয়েছে");
+    } else {
+        appState = JSON.parse(fs.readFileSync('appstate.json', 'utf8'));
+        console.log("✅ AppState লোকাল ফাইল থেকে লোড হয়েছে");
+    }
 } catch (e) {
-    console.error("❌ appstate.json লোড হয়নি।");
+    console.error("❌ AppState লোড হয়নি:", e.message);
     process.exit(1);
 }
 
 // ==================== 📦 Commands Loader ====================
 const commands = {};
-const files = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
-for (const file of files) {
-    const mod = require(path.join(__dirname, 'commands', file));
-    for (const name in mod) commands[name] = mod[name];
+try {
+    const files = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
+    for (const file of files) {
+        const mod = require(path.join(__dirname, 'commands', file));
+        for (const name in mod) {
+            commands[name] = mod[name];
+        }
+    }
+    console.log(`📦 মোট ${Object.keys(commands).length} টি কমান্ড লোড হয়েছে।`);
+} catch (e) {
+    console.error("❌ কমান্ড লোড হয়নি:", e.message);
 }
-console.log(`📦 মোট ${Object.keys(commands).length} টি কমান্ড লোড হয়েছে।`);
 
 // ==================== 🎬 Welcome/Left GIFs ====================
 const welcomeGifs = [
@@ -39,9 +53,7 @@ login({ appState }, (err, api) => {
 
     api.setOptions({
         listenEvents: true,
-        selfListen: false,
-        autoMarkDelivery: false,
-        autoMarkRead: false
+        selfListen: false
     });
 
     console.log(`${config.botName} অনলাইন! ✅`);
@@ -54,7 +66,7 @@ login({ appState }, (err, api) => {
             const msg = event.body.trim();
             const tid = event.threadID;
 
-            // Slow Mode
+            // 🛡️ Slow Mode (একই গ্রুপে ৩ সেকেন্ডে একবার)
             const now = Date.now();
             if (lastMsg[tid] && (now - lastMsg[tid] < 3000)) return;
             lastMsg[tid] = now;
@@ -70,15 +82,18 @@ login({ appState }, (err, api) => {
                 const cmd = args.shift().toLowerCase();
 
                 if (commands[cmd]) {
+                    console.log(`✅ কমান্ড রান: ${cmd}`);
                     api.sendTypingIndicator(tid, () => {});
+                    const delay = Math.floor(Math.random() * 1000) + 1000;
                     setTimeout(() => {
                         try {
                             commands[cmd](api, event, args, config);
                         } catch (e) {
                             console.error(`❌ ${cmd}:`, e);
                         }
-                    }, 1000);
+                    }, delay);
                 } else {
+                    console.log(`❌ কমান্ড পাওয়া যায়নি: ${cmd}`);
                     api.sendMessage("❌ কমান্ডটি খুঁজে পাওয়া যায়নি। /help লিখে দেখুন।", tid);
                 }
             }
@@ -142,4 +157,25 @@ login({ appState }, (err, api) => {
             });
         }
     });
+});
+
+// ==================== 🌐 Health Check Server (Render 24/7) ====================
+const PORT = process.env.PORT || 3000;
+
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end(`💀 ${config.botName} is running 24/7! ✅\nUptime: ${Math.floor(process.uptime())}s`);
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🌐 Health Check Server চালু: পোর্ট ${PORT}`);
+});
+
+// ==================== 🛡️ Error Handlers ====================
+process.on('uncaughtException', (err) => {
+    console.error("❌ Uncaught Exception:", err.message);
+});
+
+process.on('unhandledRejection', (err) => {
+    console.error("❌ Unhandled Rejection:", err);
 });
