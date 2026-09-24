@@ -430,9 +430,65 @@ Developer: ${config.developer}
         });
     },
 
-    owner: async (api, event, args, config) => {
-        const info = await new Promise(r => api.getUserInfo(config.owner, (e, ret) => r(e ? { name: "Unknown" } : ret[config.owner])));
-        api.sendMessage(`Owner: ${info.name}\nID: ${config.owner}\nDeveloper: ${config.developer}`, event.threadID);
+       owner: async (api, event, args, config) => {
+        try {
+            const threadID = event.threadID;
+            const senderID = event.senderID;
+
+            // ইউজারের Credit বের করা
+            const db = getDB();
+            const user = getUser(db, senderID);
+
+            // Owner Information
+            const ownerMsg = `👑 OWNER INFO 👑
+━━━━━━━━━━━━━━━━━━━━━━━━
+👤 Name       : Ariyan Shihab
+🌹 Nick       : কীট গোলাপ
+🎂 Age        : 21+
+💖 Relation   : Single
+📚 Profession : Student
+🎓 Education  : Degree 1st Year
+📍 Location   : Naoagon
+━━━━━━━━━━━━━━━━━━━━━━━━
+🔗 CONTACT
+━━━━━━━━━━━━━━━━━━━━━━━━
+📘 Facebook   : https://facebook.com/mdshihabofc
+💬 Messenger  : https://m.me/mdshihabofc
+━━━━━━━━━━━━━━━━━━━━━━━━
+💰 Your Credit: ${user.coins} coins
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 DEAD DESTROYER ${config.version}
+👨‍💻 Developer: ${config.developer}
+━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+            // 🎬 Itachi (Naruto) Anime GIF
+            const itachiGifs = [
+                "https://media.tenor.com/x8v1oNUOmg4AAAAC/itachi-naruto.gif",
+                "https://media.tenor.com/VlYdVjwfWQ8AAAAC/itachi-sharingan.gif",
+                "https://media.tenor.com/6n6sJZ2o3WAAAAAC/itachi-uchiha.gif",
+                "https://media.tenor.com/7JcWsWvY3KAAAAAC/itachi-anime.gif",
+                "https://media.tenor.com/9YJcWsWvY3KAAAAAC/itachi-crow.gif"
+            ];
+            const randomGif = itachiGifs[Math.floor(Math.random() * itachiGifs.length)];
+
+            try {
+                const res = await axios.get(randomGif, { 
+                    responseType: 'stream', 
+                    timeout: 8000 
+                });
+                api.sendMessage({
+                    body: ownerMsg,
+                    attachment: res.data
+                }, threadID);
+            } catch (e) {
+                // GIF লোড না হলে শুধু টেক্সট
+                api.sendMessage(ownerMsg, threadID);
+            }
+
+        } catch (err) {
+            console.error("owner error:", err);
+            api.sendMessage("Failed to load owner info.", event.threadID);
+        }
     },
 
     uid: async (api, event, args) => {
