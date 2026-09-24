@@ -26,26 +26,12 @@ try {
     const files = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
     for (const file of files) {
         const mod = require(path.join(__dirname, 'commands', file));
-        for (const name in mod) {
-            commands[name] = mod[name];
-        }
+        for (const name in mod) commands[name] = mod[name];
     }
     console.log(`Total ${Object.keys(commands).length} commands loaded`);
 } catch (e) {
     console.error("Commands load failed:", e.message);
 }
-
-// ==================== Welcome/Left GIFs ====================
-const welcomeGifs = [
-    "https://media.tenor.com/9W3qZfY3XwAAAAAC/anime-welcome.gif",
-    "https://media.tenor.com/5K2zXfV3W0AAAAAC/welcome-anime.gif",
-    "https://media.tenor.com/L3qY2zFvX0AAAAAC/anime-hello.gif"
-];
-const leftGifs = [
-    "https://media.tenor.com/8W3qY2zfX0AAAAAC/anime-goodbye.gif",
-    "https://media.tenor.com/2Z4vX3WfY0AAAAAC/sad-goodbye-anime.gif",
-    "https://media.tenor.com/B3qYzV2fX0AAAAAC/wave-goodbye.gif"
-];
 
 const lastMsg = {};
 
@@ -53,16 +39,17 @@ const lastMsg = {};
 login({ appState }, (err, api) => {
     if (err) return console.error("Login failed:", err);
 
- api.setOptions({
-    listenEvents: true,
-    selfListen: true
-});
+    api.setOptions({
+        listenEvents: true,
+        selfListen: false
+    });
+
     console.log(`${config.botName} is online`);
 
     api.listenMqtt(async (err, event) => {
         if (err) return console.error(err);
 
-        // ==================== Message Event ====================
+        // ==================== MESSAGE EVENT ====================
         if (event.type === "message") {
             const msg = event.body.trim();
             const tid = event.threadID;
@@ -96,7 +83,7 @@ login({ appState }, (err, api) => {
             }
         }
 
-        // ==================== Welcome Event ====================
+        // ==================== WELCOME EVENT ====================
         if (event.logMessageType === "log:subscribe") {
             const tid = event.threadID;
             const added = event.logMessageData.addedParticipants;
@@ -110,47 +97,133 @@ login({ appState }, (err, api) => {
                 );
             }
 
-            for (const p of added) {
-                const name = p.fullName || "New Member";
-                const gif = welcomeGifs[Math.floor(Math.random() * welcomeGifs.length)];
-                try {
-                    const res = await axios.get(gif, { responseType: 'stream' });
-                    api.getThreadInfo(tid, (e, info) => {
-                        const gn = info?.threadName || "Group";
-                        const mc = info?.participantIDs?.length || "?";
-                        const wm = `Welcome ${name}\nGroup: ${gn}\nMembers: ${mc}\nType /rules and /help`;
-                        api.sendMessage({
-                            body: wm,
-                            mentions: [{ tag: name, id: p.userFbId }],
-                            attachment: res.data
-                        }, tid);
-                    });
-                } catch (e) {
-                    api.sendMessage(`Welcome ${name}`, tid);
+            api.getThreadInfo(tid, async (err, info) => {
+                if (err) return;
+
+                const groupName = info?.threadName || "Our Group";
+                const memberCount = info?.participantIDs?.length || 0;
+                const groupImage = info?.imageSrc || null;
+
+                for (const p of added) {
+                    const name = p.fullName || "New Member";
+
+                    const welcomeMsg = `🌸 Welcome ${name}!
+━━━━━━━━━━━━━━━━━━━━━━━━
+🌹 To our group family!
+⭐ We're excited to have you!
+🎉 Please introduce yourself!
+━━━━━━━━━━━━━━━━━━━━━━━━
+🌸 Enjoy your stay!
+
+👥 Total Members: ${memberCount}
+📌 Group: ${groupName}
+🤖 Bot: ${config.botName}`;
+
+                    if (groupImage) {
+                        try {
+                            const imageStream = await axios.get(groupImage, { responseType: 'stream' });
+                            api.sendMessage({
+                                body: welcomeMsg,
+                                mentions: [{ tag: name, id: p.userFbId }],
+                                attachment: imageStream.data
+                            }, tid);
+                        } catch (e) {
+                            api.sendMessage({
+                                body: welcomeMsg,
+                                mentions: [{ tag: name, id: p.userFbId }]
+                            }, tid);
+                        }
+                    } else {
+                        const welcomeGifs = [
+                            "https://media.tenor.com/9W3qZfY3XwAAAAAC/anime-welcome.gif",
+                            "https://media.tenor.com/5K2zXfV3W0AAAAAC/welcome-anime.gif"
+                        ];
+                        const gif = welcomeGifs[Math.floor(Math.random() * welcomeGifs.length)];
+                        try {
+                            const gifRes = await axios.get(gif, { responseType: 'stream' });
+                            api.sendMessage({
+                                body: welcomeMsg,
+                                mentions: [{ tag: name, id: p.userFbId }],
+                                attachment: gifRes.data
+                            }, tid);
+                        } catch (e) {
+                            api.sendMessage({
+                                body: welcomeMsg,
+                                mentions: [{ tag: name, id: p.userFbId }]
+                            }, tid);
+                        }
+                    }
                 }
-            }
+            });
         }
 
-        // ==================== Left Event ====================
+        // ==================== LEFT EVENT ====================
         if (event.logMessageType === "log:unsubscribe") {
             const tid = event.threadID;
             const leftID = event.logMessageData.leftParticipantFbId;
             if (leftID === api.getCurrentUserID()) return;
 
             const kicked = event.author !== leftID;
-            api.getUserInfo(leftID, async (e, ret) => {
-                if (e) return;
-                const name = ret[leftID]?.name || "A member";
-                const gif = leftGifs[Math.floor(Math.random() * leftGifs.length)];
-                try {
-                    const res = await axios.get(gif, { responseType: 'stream' });
-                    const lm = kicked
-                        ? `${name} was kicked from the group`
-                        : `Goodbye ${name}. We will miss you.`;
-                    api.sendMessage({ body: lm, attachment: res.data }, tid);
-                } catch (e) {
-                    api.sendMessage(kicked ? `${name} was kicked.` : `Goodbye ${name}.`, tid);
-                }
+
+            api.getThreadInfo(tid, async (err, info) => {
+                if (err) return;
+
+                const groupName = info?.threadName || "Our Group";
+                const memberCount = info?.participantIDs?.length || 0;
+                const groupImage = info?.imageSrc || null;
+
+                api.getUserInfo(leftID, async (e, ret) => {
+                    if (e) return;
+                    const name = ret[leftID]?.name || "A member";
+
+                    let leftMsg;
+                    if (kicked) {
+                        leftMsg = `👢 ${name} was kicked from the group.
+━━━━━━━━━━━━━━━━━━━━━━━━
+Reason: Rule violation
+━━━━━━━━━━━━━━━━━━━━━━━━
+👥 Remaining Members: ${memberCount}
+📌 Group: ${groupName}
+🤖 Bot: ${config.botName}`;
+                    } else {
+                        leftMsg = `🍂 Goodbye ${name}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💔 We will miss you
+🌟 Hope to see you again
+🌙 Farewell and take care
+━━━━━━━━━━━━━━━━━━━━━━━━
+👥 Remaining Members: ${memberCount}
+📌 Group: ${groupName}
+🤖 Bot: ${config.botName}`;
+                    }
+
+                    if (groupImage) {
+                        try {
+                            const imageStream = await axios.get(groupImage, { responseType: 'stream' });
+                            api.sendMessage({
+                                body: leftMsg,
+                                attachment: imageStream.data
+                            }, tid);
+                        } catch (e) {
+                            api.sendMessage(leftMsg, tid);
+                        }
+                    } else {
+                        const leftGifs = [
+                            "https://media.tenor.com/8W3qY2zfX0AAAAAC/anime-goodbye.gif",
+                            "https://media.tenor.com/2Z4vX3WfY0AAAAAC/sad-goodbye-anime.gif"
+                        ];
+                        const gif = leftGifs[Math.floor(Math.random() * leftGifs.length)];
+                        try {
+                            const gifRes = await axios.get(gif, { responseType: 'stream' });
+                            api.sendMessage({
+                                body: leftMsg,
+                                attachment: gifRes.data
+                            }, tid);
+                        } catch (e) {
+                            api.sendMessage(leftMsg, tid);
+                        }
+                    }
+                });
             });
         }
     });
@@ -168,33 +241,21 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`Health check server running on port ${PORT}`);
 });
 
-// ==================== Error Handlers ====================
-process.on('uncaughtException', (err) => {
-    console.error("Uncaught Exception:", err.message);
-});
-
-process.on('unhandledRejection', (err) => {
-    console.error("Unhandled Rejection:", err);
-});
-
-          // 24/7 loop to keep the bot alive
-
-          // ==================== 🔄 Self-Ping (24/7 Keep Alive) ====================
+// ==================== Self-Ping ====================
 const RENDER_URL = process.env.RENDER_URL || "https://destroy-k66o.onrender.com";
 
 setInterval(async () => {
     try {
         await axios.get(RENDER_URL);
-        console.log(`[Self-Ping] ${new Date().toLocaleTimeString()} - Server alive`);
+        console.log(`[Self-Ping] Server alive`);
     } catch (e) {
         console.error(`[Self-Ping] Failed: ${e.message}`);
     }
-}, 4 * 60 * 1000); // প্রতি ৪ মিনিটে নিজেকে পিং করবে
+}, 4 * 60 * 1000);
 
-// ==================== 🛡️ Auto-Restart on Crash ====================
+// ==================== Error Handlers ====================
 process.on('uncaughtException', (err) => {
     console.error("Uncaught Exception:", err.message);
-    // ৫ সেকেন্ড পরে রিস্টার্ট হবে না, Render অটো-রিস্টার্ট করবে
 });
 
 process.on('unhandledRejection', (err) => {
