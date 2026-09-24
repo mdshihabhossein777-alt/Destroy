@@ -174,3 +174,27 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (err) => {
     console.error("Unhandled Rejection:", err);
 });
+
+          // 24/7 loop to keep the bot alive
+
+          // ==================== 🔄 Self-Ping (24/7 Keep Alive) ====================
+const RENDER_URL = process.env.RENDER_URL || "https://destroy-k66o.onrender.com";
+
+setInterval(async () => {
+    try {
+        await axios.get(RENDER_URL);
+        console.log(`[Self-Ping] ${new Date().toLocaleTimeString()} - Server alive`);
+    } catch (e) {
+        console.error(`[Self-Ping] Failed: ${e.message}`);
+    }
+}, 4 * 60 * 1000); // প্রতি ৪ মিনিটে নিজেকে পিং করবে
+
+// ==================== 🛡️ Auto-Restart on Crash ====================
+process.on('uncaughtException', (err) => {
+    console.error("Uncaught Exception:", err.message);
+    // ৫ সেকেন্ড পরে রিস্টার্ট হবে না, Render অটো-রিস্টার্ট করবে
+});
+
+process.on('unhandledRejection', (err) => {
+    console.error("Unhandled Rejection:", err);
+});
