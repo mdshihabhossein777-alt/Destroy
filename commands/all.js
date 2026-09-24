@@ -13,13 +13,6 @@ function getDB() {
 function saveDB(data) {
     fs.writeFileSync(dbFile, JSON.stringify(data, null, 2));
 }
-function getUser(db, id) {
-    if (!db.users[id]) {
-        db.users[id] = { coins: 1000, shield: false, lastDaily: 0 };
-        saveDB(db);
-    }
-    return db.users[id];
-}
 
 // ==================== Permission ====================
 async function checkPermission(api, event, config, requiredLevel) {
@@ -64,17 +57,9 @@ const WAIFU_API = "https://api.waifu.pics/sfw";
 const animeCategories = {
     help: "wave",
     owner: "smile",
-    hug: "hug",
-    kiss: "kiss",
-    slap: "slap",
-    pat: "pat",
-    dance: "dance",
-    cry: "cry",
-    laugh: "happy",
     pair: "cuddle",
     ship: "kiss",
     roast: "bonk",
-    game: "dance",
     welcome: "wave",
     goodbye: "wave"
 };
@@ -86,7 +71,6 @@ async function fetchAnimeGif(category) {
         if (res.data && res.data.url) return res.data.url;
         return null;
     } catch (e) {
-        // Fallback: Nekos.best
         try {
             const fallbackMap = { help: "wave", owner: "smile", pair: "cuddle", ship: "kiss", roast: "bonk" };
             const fbCat = fallbackMap[category] || "hug";
@@ -142,21 +126,17 @@ module.exports = {
 
             const db = getDB();
             const rules = db.groups[threadID]?.rules || "No rules set yet";
-            const user = getUser(db, senderID);
 
-            // এখন তারিখ ও সময়
             const now = new Date();
             const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
             const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            // ========== Role অনুযায়ী কমান্ড লিস্ট ==========
             let coreCmds = `
 [ 01 ] USER INFO
 ──────────────────────────────
 Name    : ${userInfo.name}
 UID     : ${senderID}
 Role    : ${perm.userRole}
-Credit  : ${user.coins} coins
 Date    : ${dateStr}
 Time    : ${timeStr}
 
@@ -178,26 +158,9 @@ ${rules}`;
 /ping     - Bot status
 /uid      - Your ID
 /owner    - Owner info
-/balance  - Check coins
-/daily    - Claim 500 coins
-/work     - Earn coins
-/gamble   - Gamble coins
-/slots    - Slot machine
-/shop     - Shop items
-/buy      - Buy item
-/top      - Top members
-/game     - Game menu
-/dice     - Roll dice
-/coin     - Flip coin
-/rps      - Rock Paper Scissors
-/random   - Random number
-/choose   - Pick option
-/8ball    - Magic 8-ball
-/quiz     - Quiz
-/trivia   - Trivia
-/pair     - Matchmaking
+/pair     - Boy-Girl matchmaking
 /ship     - Love calculator
-/roast    - Roast user`;
+/roast    - Roast a user`;
 
             let adminCmds = `
 [ 05 ] GROUP ADMIN COMMANDS
@@ -211,7 +174,9 @@ ${rules}`;
 /lock         /unlock
 /autonick     /resetnick
 /setallnick   /say
-/poll         /vid`;
+/poll         /vid
+/setgender    /genderlist
+/cleargender`;
 
             let botAdminCmds = `
 [ 06 ] BOT ADMIN COMMANDS
@@ -226,9 +191,7 @@ ${rules}`;
 /removeadmin @user
 /restart`;
 
-            // Role অনুযায়ী শুধু সেই কমান্ড দেখানো
             let fullMsg = coreCmds + publicCmds;
-
             if (perm.userLevel >= 1) fullMsg += adminCmds;
             if (perm.userLevel >= 2) fullMsg += botAdminCmds;
             if (perm.userLevel >= 3) fullMsg += ownerCmds;
@@ -259,17 +222,10 @@ ${rules}`;
     owner: async (api, event, args, config) => {
         try {
             const threadID = event.threadID;
-            const db = getDB();
-            const user = getUser(db, event.senderID);
 
-            // বর্তমান তারিখ ও সময়
             const now = new Date();
-            const dateStr = now.toLocaleDateString('en-GB', {
-                day: '2-digit', month: 'long', year: 'numeric'
-            });
-            const timeStr = now.toLocaleTimeString('en-GB', {
-                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
-            });
+            const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 
             const ownerMsg = `👑 OWNER INFO 👑
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -286,7 +242,6 @@ ${rules}`;
 📘 Facebook   : https://facebook.com/mdshihabofc
 💬 Messenger  : https://m.me/mdshihabofc
 ━━━━━━━━━━━━━━━━━━━━━━━━
-💰 Your Credit: ${user.coins} coins
 📅 Date       : ${dateStr}
 ⏰ Time       : ${timeStr}
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -497,7 +452,7 @@ ${rules}`;
         if (args[0] === "on") {
             db.settings.autoKick = true;
             saveDB(db);
-            api.sendMessage("✅ Auto-Kick enabled. Inactive members (7+ days) will be kicked every 24 hours.", event.threadID);
+            api.sendMessage("✅ Auto-Kick enabled.", event.threadID);
         } else if (args[0] === "off") {
             db.settings.autoKick = false;
             saveDB(db);
@@ -581,249 +536,167 @@ ${rules}`;
         } catch (e) { api.sendMessage("Error.", event.threadID); }
     },
 
-    // ==================== ECONOMY ====================
-    balance: (api, event) => {
-        const db = getDB();
-        const u = getUser(db, event.senderID);
-        api.sendMessage(`💰 Your balance: ${u.coins} coins`, event.threadID);
-    },
+    // ==================== SETGENDER ====================
+    setgender: async (api, event, args, config) => {
+        const perm = await checkPermission(api, event, config, 1);
+        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
 
-    daily: (api, event) => {
-        const db = getDB();
-        const u = getUser(db, event.senderID);
-        const now = Date.now();
-        if (now - u.lastDaily < 86400000) {
-            const rem = Math.ceil((86400000 - (now - u.lastDaily)) / 3600000);
-            return api.sendMessage(`⏳ Try again in ${rem} hours.`, event.threadID);
-        }
-        u.coins += 500;
-        u.lastDaily = now;
-        saveDB(db);
-        api.sendMessage(`✅ You claimed 500 coins. Total: ${u.coins}`, event.threadID);
-    },
-
-    work: (api, event) => {
-        const db = getDB();
-        const u = getUser(db, event.senderID);
-        const e = Math.floor(Math.random() * 201) + 100;
-        u.coins += e;
-        saveDB(db);
-        api.sendMessage(`💼 You earned ${e} coins. Total: ${u.coins}`, event.threadID);
-    },
-
-    gamble: (api, event, args) => {
-        const db = getDB();
-        const u = getUser(db, event.senderID);
-        const amt = parseInt(args[0]);
-        if (!amt || amt <= 0) return api.sendMessage("Usage: /gamble 500", event.threadID);
-        if (amt > u.coins) return api.sendMessage("Not enough coins.", event.threadID);
-        if (Math.random() < 0.5) {
-            u.coins += amt;
-            api.sendMessage(`🎉 You won ${amt}. Total: ${u.coins}`, event.threadID);
-        } else {
-            u.coins -= amt;
-            api.sendMessage(`😢 You lost ${amt}. Total: ${u.coins}`, event.threadID);
-        }
-        saveDB(db);
-    },
-
-    slots: (api, event, args) => {
-        const db = getDB();
-        const u = getUser(db, event.senderID);
-        const amt = parseInt(args[0]) || 100;
-        if (amt > u.coins) return api.sendMessage("Not enough coins.", event.threadID);
-        const s = ["CHERRY", "LEMON", "ORANGE", "GRAPE", "GEM", "SEVEN"];
-        const a = s[Math.floor(Math.random() * 6)];
-        const b = s[Math.floor(Math.random() * 6)];
-        const c = s[Math.floor(Math.random() * 6)];
-        const r = `${a} | ${b} | ${c}`;
-        if (a === b && b === c) {
-            u.coins += amt * 3;
-            api.sendMessage(`🎰 JACKPOT! ${r}\n+${amt * 3}. Total: ${u.coins}`, event.threadID);
-        } else {
-            u.coins -= amt;
-            api.sendMessage(`🎰 ${r}\n-${amt}. Total: ${u.coins}`, event.threadID);
-        }
-        saveDB(db);
-    },
-
-    rob: (api, event, args) => {
-        const db = getDB();
-        const u = getUser(db, event.senderID);
-        const t = Object.keys(event.mentions || {})[0] || args[0];
-        if (!t) return api.sendMessage("Usage: /rob @user", event.threadID);
-        const tu = getUser(db, t);
-        if (tu.shield) return api.sendMessage("🛡️ Target has shield.", event.threadID);
-        const amt = Math.floor(Math.random() * 500) + 100;
-        if (tu.coins < amt) return api.sendMessage("Target has insufficient coins.", event.threadID);
-        tu.coins -= amt;
-        u.coins += amt;
-        saveDB(db);
-        api.sendMessage(`🦹 You stole ${amt}. Total: ${u.coins}`, event.threadID);
-    },
-
-    shop: (api, event) => {
-        const msg = `🛒 SHOP
+        const target = Object.keys(event.mentions || {})[0];
+        if (!target) {
+            return api.sendMessage(
+                `⚙️ Set Gender
 ━━━━━━━━━━━━━━━━━━━━━━
-🛡️ Shield    - 2000 coins
-📄 Insurance - 3500 coins
-✖️ Double    - 1500 coins
-💎 VIP       - 5000 coins
-✨ Glow      - 3000 coins
-🍀 Lucky     - 1000 coins
-⚡ Booster   - 1200 coins
-🔒 Locker    - 4000 coins
-━━━━━━━━━━━━━━━━━━━━━━
-Buy: /buy [item]`;
+Usage: /setgender @user male
+       /setgender @user female
+
+Example:
+/setgender @Riya female
+/setgender @Omor male`,
+                event.threadID
+            );
+        }
+
+        const gender = args.filter(a => !a.startsWith('@'))[0]?.toLowerCase();
+        if (!gender || !["male", "female", "boy", "girl"].includes(gender)) {
+            return api.sendMessage("❌ Usage: /setgender @user male/female", event.threadID);
+        }
+
+        const normalizedGender = (gender === "boy") ? "male" : (gender === "girl") ? "female" : gender;
+
+        const db = getDB();
+        if (!db.groups) db.groups = {};
+        if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
+        if (!db.groups[event.threadID].genders) db.groups[event.threadID].genders = {};
+
+        db.groups[event.threadID].genders[target] = normalizedGender;
+        saveDB(db);
+
+        const name = event.mentions[target].replace('@', '');
+        api.sendMessage(`✅ ${name} is set as ${normalizedGender.toUpperCase()}`, event.threadID);
+    },
+
+    genderlist: async (api, event, args, config) => {
+        const perm = await checkPermission(api, event, config, 1);
+        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
+
+        const db = getDB();
+        if (!db.groups || !db.groups[event.threadID] || !db.groups[event.threadID].genders) {
+            return api.sendMessage("❌ No gender data yet. Use /setgender to add.", event.threadID);
+        }
+
+        const genders = db.groups[event.threadID].genders;
+        const males = [];
+        const females = [];
+
+        for (const id in genders) {
+            const info = await new Promise(r => api.getUserInfo(id, (e, ret) => r(e ? { name: "Unknown" } : ret[id])));
+            if (genders[id] === "male") males.push(info.name);
+            else if (genders[id] === "female") females.push(info.name);
+        }
+
+        let msg = `👥 Gender List\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+        msg += `👦 Males (${males.length}):\n${males.join(", ") || "None"}\n\n`;
+        msg += `👧 Females (${females.length}):\n${females.join(", ") || "None"}`;
+
         api.sendMessage(msg, event.threadID);
     },
 
-    buy: (api, event, args) => {
+    cleargender: async (api, event, args, config) => {
+        const perm = await checkPermission(api, event, config, 1);
+        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
+
         const db = getDB();
-        const u = getUser(db, event.senderID);
-        const it = args[0]?.toLowerCase();
-        const prices = { shield: 2000, insurance: 3500, double: 1500, vip: 5000, glow: 3000, lucky: 1000, booster: 1200, locker: 4000 };
-        if (!prices[it]) return api.sendMessage("Usage: /buy [shield/insurance/double/vip/glow/lucky/booster/locker]", event.threadID);
-        if (u.coins < prices[it]) return api.sendMessage(`Need ${prices[it]} coins.`, event.threadID);
-        u.coins -= prices[it];
-        u[it] = true;
-        saveDB(db);
-        api.sendMessage(`✅ Purchased ${it}. Remaining: ${u.coins}`, event.threadID);
-    },
-
-    top: (api, event) => {
-        const db = getDB();
-        const u = Object.entries(db.users).sort((a, b) => (b[1].coins || 0) - (a[1].coins || 0)).slice(0, 5);
-        let msg = "🏆 Top Members\n━━━━━━━━━━━━━━━━━━━━━━\n";
-        u.forEach((x, i) => { msg += `${i + 1}. ${x[0]}: ${x[1].coins} coins\n`; });
-        api.sendMessage(msg || "No data.", event.threadID);
-    },
-
-    // ==================== GAMES ====================
-    game: async (api, event, args, config) => {
-        const gamesList = `🎮 GAME ZONE 🎮
-━━━━━━━━━━━━━━━━━━━━━━━━
-🎲 /dice        - Roll a dice
-🪙 /coin        - Flip a coin
-🎰 /slots [amt] - Slot machine
-🃏 /gamble [amt]- Gamble coins
-✊ /rps [move]  - Rock Paper Scissors
-🔢 /random      - Random number
-🤔 /choose      - Pick from options
-🎱 /8ball       - Magic 8-Ball
-❓ /quiz        - Quiz question
-🧠 /trivia      - Trivia question
-━━━━━━━━━━━━━━━━━━━━━━━━
-Use any command to play!
-🤖 ${config.botName}`;
-
-        await sendWithGif(api, event, gamesList, 'game');
-    },
-
-    dice: (api, event) => {
-        const result = Math.floor(Math.random() * 6) + 1;
-        api.sendMessage(`🎲 Dice rolled: ${result}`, event.threadID);
-    },
-
-    coin: (api, event) => {
-        const result = Math.random() < 0.5 ? "HEADS" : "TAILS";
-        api.sendMessage(`🪙 Coin flip: ${result}`, event.threadID);
-    },
-
-    rps: (api, event, args) => {
-        const moves = ["rock", "paper", "scissors"];
-        const botMove = moves[Math.floor(Math.random() * 3)];
-        const userMove = args[0]?.toLowerCase();
-        if (!userMove || !moves.includes(userMove)) {
-            return api.sendMessage("Usage: /rps [rock/paper/scissors]", event.threadID);
+        if (!db.groups || !db.groups[event.threadID]) {
+            return api.sendMessage("❌ No data to clear.", event.threadID);
         }
-        let result;
-        if (userMove === botMove) result = "TIE!";
-        else if (
-            (userMove === "rock" && botMove === "scissors") ||
-            (userMove === "paper" && botMove === "rock") ||
-            (userMove === "scissors" && botMove === "paper")
-        ) result = "YOU WIN!";
-        else result = "YOU LOSE!";
-        api.sendMessage(`✊ RPS\nYou: ${userMove}\nBot: ${botMove}\n━━━━━━━━━━━━\nResult: ${result}`, event.threadID);
+
+        db.groups[event.threadID].genders = {};
+        saveDB(db);
+        api.sendMessage("✅ All gender data cleared.", event.threadID);
     },
 
-    random: (api, event, args) => {
-        const min = parseInt(args[0]) || 1;
-        const max = parseInt(args[1]) || 100;
-        if (min >= max) return api.sendMessage("Usage: /random 1 100", event.threadID);
-        const result = Math.floor(Math.random() * (max - min + 1)) + min;
-        api.sendMessage(`🔢 Random (${min}-${max}): ${result}`, event.threadID);
-    },
-
-    choose: (api, event, args) => {
-        const text = args.join(" ");
-        if (!text) return api.sendMessage("Usage: /choose option1 | option2", event.threadID);
-        const options = text.split("|").map(o => o.trim()).filter(o => o);
-        if (options.length < 2) return api.sendMessage("Provide at least 2 options separated by |", event.threadID);
-        const choice = options[Math.floor(Math.random() * options.length)];
-        api.sendMessage(`🤔 I choose: ${choice}`, event.threadID);
-    },
-
-    '8ball': (api, event, args) => {
-        const q = args.join(" ");
-        if (!q) return api.sendMessage("Usage: /8ball [question]", event.threadID);
-        const answers = ["Yes, definitely.", "No, not at all.", "Maybe...", "Ask again later.", "The stars say yes.", "Don't count on it.", "Most likely.", "Very doubtful."];
-        const answer = answers[Math.floor(Math.random() * answers.length)];
-        api.sendMessage(`🎱 Q: ${q}\nA: ${answer}`, event.threadID);
-    },
-
-    quiz: (api, event) => {
-        const q = ["What is the capital of Bangladesh?", "How many continents?", "What is 5 + 5?", "Who invented the light bulb?", "What color is the sky?"];
-        api.sendMessage(`❓ Quiz: ${q[Math.floor(Math.random() * q.length)]}`, event.threadID);
-    },
-
-    trivia: (api, event) => {
-        const t = ["Honey never spoils.", "Octopuses have three hearts.", "A day on Venus is longer than a year.", "Bananas are berries.", "Eiffel Tower grows in summer."];
-        api.sendMessage(`🧠 Trivia: Did you know? ${t[Math.floor(Math.random() * t.length)]}`, event.threadID);
-    },
-
-    // ==================== PAIR ====================
+    // ==================== PAIR (Boy + Girl Only) ====================
     pair: async (api, event) => {
         try {
-            const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-            if (!info) return api.sendMessage("Failed to load.", event.threadID);
-            
+            const threadID = event.threadID;
+            const db = getDB();
+
+            const info = await new Promise(r => api.getThreadInfo(threadID, (e, i) => r(e ? null : i)));
+            if (!info) return api.sendMessage("❌ Failed to load group info.", threadID);
+
             const members = info.participantIDs.filter(id => id !== api.getCurrentUserID());
             if (members.length < 2) {
-                return api.sendMessage("Need at least 2 members.", event.threadID);
+                return api.sendMessage("❌ Need at least 2 members.", threadID);
             }
 
-            const sh = members.sort(() => 0.5 - Math.random());
-            const u1 = sh[0], u2 = sh[1];
+            if (!db.groups) db.groups = {};
+            if (!db.groups[threadID]) db.groups[threadID] = {};
+            if (!db.groups[threadID].genders) db.groups[threadID].genders = {};
 
-            const n1 = await new Promise(r => api.getUserInfo(u1, (e, ret) => r(e ? { name: "Unknown" } : ret[u1])));
-            const n2 = await new Promise(r => api.getUserInfo(u2, (e, ret) => r(e ? { name: "Unknown" } : ret[u2])));
+            const savedGenders = db.groups[threadID].genders || {};
+
+            const maleList = [];
+            const femaleList = [];
+
+            for (const memberID of members) {
+                if (savedGenders[memberID]) {
+                    if (savedGenders[memberID] === "male") maleList.push(memberID);
+                    else if (savedGenders[memberID] === "female") femaleList.push(memberID);
+                    continue;
+                }
+
+                try {
+                    const userInfo = await new Promise(r => api.getUserInfo(memberID, (e, ret) => r(e ? null : ret[memberID])));
+                    if (userInfo && userInfo.gender) {
+                        if (userInfo.gender === 2) maleList.push(memberID);
+                        else if (userInfo.gender === 1) femaleList.push(memberID);
+                    }
+                } catch (e) {}
+            }
+
+            if (maleList.length === 0 || femaleList.length === 0) {
+                return api.sendMessage(
+                    `⚠️ Cannot find a boy-girl pair!
+━━━━━━━━━━━━━━━━━━━━━━
+👦 Males  : ${maleList.length}
+👧 Females: ${femaleList.length}
+━━━━━━━━━━━━━━━━━━━━━━
+Use /setgender to register members:
+/setgender @user male
+/setgender @user female`,
+                    threadID
+                );
+            }
+
+            const boy = maleList[Math.floor(Math.random() * maleList.length)];
+            const girl = femaleList[Math.floor(Math.random() * femaleList.length)];
+
+            const boyInfo = await new Promise(r => api.getUserInfo(boy, (e, ret) => r(e ? { name: "Unknown" } : ret[boy])));
+            const girlInfo = await new Promise(r => api.getUserInfo(girl, (e, ret) => r(e ? { name: "Unknown" } : ret[girl])));
 
             const comp = Math.floor(Math.random() * 41) + 60;
 
             const msg = `💕 Matchmaking Complete 💕
 ━━━━━━━━━━━━━━━━━━━━━━━━
-❤️ ${n1.name} ❤️
-        ➕
-💙 ${n2.name} 💙
+👦 ${boyInfo.name}  ❤️  👧 ${girlInfo.name}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 💌 Destiny has written your names together 💌
 💫 May your bond last forever ✨
 
 💖 Compatibility: ${comp}%
 ${comp >= 90 ? "🔥 PERFECT MATCH!" : comp >= 75 ? "💕 GREAT MATCH!" : "💖 GOOD MATCH!"}
-━━━━━━━━━━━━━━━━━━━━━━━━`;
+━━━━━━━━━━━━━━━━━━━━━━━━
+💘 A beautiful couple made in heaven 💘`;
 
             const mentions = [
-                { tag: n1.name, id: u1 },
-                { tag: n2.name, id: u2 }
+                { tag: boyInfo.name, id: boy },
+                { tag: girlInfo.name, id: girl }
             ];
 
             await sendWithGif(api, event, msg, 'pair', mentions);
         } catch (e) {
             console.error("pair error:", e);
-            api.sendMessage("Pair failed.", event.threadID);
+            api.sendMessage("❌ Pair failed.", event.threadID);
         }
     },
 
@@ -872,7 +745,7 @@ ${p >= 90 ? "🔥 PERFECT COUPLE!" : p >= 75 ? "💕 GREAT PAIR!" : "💖 GOOD P
         }
     },
 
-    // ==================== ROAST (Target User) ====================
+    // ==================== ROAST ====================
     roast: async (api, event, args) => {
         try {
             const mentions = Object.keys(event.mentions || {});
