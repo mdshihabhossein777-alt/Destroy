@@ -7,7 +7,7 @@ function getDB() {
     try {
         return JSON.parse(fs.readFileSync(dbFile, 'utf8'));
     } catch (e) {
-        return { groups: {}, users: {}, warnings: {}, banned: {}, settings: {} };
+        return { groups: {}, users: {}, warnings: {}, banned: {}, activity: {}, settings: {} };
     }
 }
 function saveDB(data) {
@@ -51,70 +51,43 @@ function sendPermissionDenied(api, event, requiredLevel) {
     api.sendMessage(`Permission denied.\nRequired: ${levels[requiredLevel]}\nYour role: User`, event.threadID);
 }
 
-// ==================== Anime GIF Library (High Quality) ====================
+// ==================== Anime GIFs ====================
 const GIFS = {
     help: [
         "https://media.tenor.com/x8v1oNUOmg4AAAAC/itachi-naruto.gif",
-        "https://media.tenor.com/6n6sJZ2o3WAAAAAC/itachi-uchiha.gif",
-        "https://media.tenor.com/VlYdVjwfWQ8AAAAC/itachi-sharingan.gif",
-        "https://media.tenor.com/7JcWsWvY3KAAAAAC/itachi-anime.gif"
+        "https://media.tenor.com/VlYdVjwfWQ8AAAAC/itachi-sharingan.gif"
     ],
     hug: [
         "https://media.tenor.com/9B2-jZ7FKW0AAAAC/anime-hug.gif",
-        "https://media.tenor.com/LF3P5YjR3r4AAAAC/anime-hug-couple.gif",
-        "https://media.tenor.com/qN5B3z2zR7MAAAAC/anime-hug-cute.gif",
-        "https://media.tenor.com/8OZ7nFhU8Z4AAAAC/hug-anime.gif"
+        "https://media.tenor.com/LF3P5YjR3r4AAAAC/anime-hug-couple.gif"
     ],
     kiss: [
         "https://media.tenor.com/CQkQ7J4N2X0AAAAC/anime-kiss.gif",
-        "https://media.tenor.com/FUc8M1Nr7PAAAAAC/anime-kiss-love.gif",
-        "https://media.tenor.com/3wqVfzLd3X0AAAAC/anime-kiss-cute.gif"
+        "https://media.tenor.com/FUc8M1Nr7PAAAAAC/anime-kiss-love.gif"
     ],
     slap: [
-        "https://media.tenor.com/6B3vN_P0yLAAAAAC/anime-slap.gif",
-        "https://media.tenor.com/vQ3Z3FjLt0kAAAAC/anime-slap-cat.gif",
-        "https://media.tenor.com/W5Kz_fR8XqMAAAAC/anime-slap-angry.gif"
+        "https://media.tenor.com/6B3vN_P0yLAAAAAC/anime-slap.gif"
     ],
     pat: [
-        "https://media.tenor.com/qVzVfEqB3L0AAAAC/anime-pat.gif",
-        "https://media.tenor.com/8Y3N4bFvL2MAAAAC/anime-pat-cute.gif",
-        "https://media.tenor.com/vN3qWfYp2Z0AAAAC/head-pat-anime.gif"
+        "https://media.tenor.com/qVzVfEqB3L0AAAAC/anime-pat.gif"
     ],
     dance: [
-        "https://media.tenor.com/8vY3Z4XbK0kAAAAC/anime-dance.gif",
-        "https://media.tenor.com/B2vNjKv3zF4AAAAC/anime-dancing.gif",
-        "https://media.tenor.com/2sYxF5KzY2AAAAAC/naruto-dance.gif"
+        "https://media.tenor.com/8vY3Z4XbK0kAAAAC/anime-dance.gif"
     ],
     cry: [
-        "https://media.tenor.com/8HZ3vXfK2Z4AAAAC/anime-cry.gif",
-        "https://media.tenor.com/LXzK7wV3Q3QAAAAC/anime-sad.gif",
-        "https://media.tenor.com/Bv3Y2zFqXp0AAAAC/anime-crying.gif"
+        "https://media.tenor.com/8HZ3vXfK2Z4AAAAC/anime-cry.gif"
     ],
     laugh: [
-        "https://media.tenor.com/5WzVf3XzF2AAAAAC/anime-laugh.gif",
-        "https://media.tenor.com/K3wXzVfW3F0AAAAC/anime-happy.gif",
-        "https://media.tenor.com/Z2vXzY3FW0AAAAAC/anime-smile.gif"
+        "https://media.tenor.com/5WzVf3XzF2AAAAAC/anime-laugh.gif"
     ],
     pair: [
-        "https://media.tenor.com/XkZ3qWfN7B0AAAAC/anime-love-couple.gif",
-        "https://media.tenor.com/LvY3nFjW6W0AAAAC/anime-couple.gif",
-        "https://media.tenor.com/5K3vXfY3Z4MAAAAC/romantic-anime.gif",
-        "https://media.tenor.com/Z4vNfW3BqW0AAAAC/anime-love.gif"
+        "https://media.tenor.com/XkZ3qWfN7B0AAAAC/anime-love-couple.gif"
     ],
     ship: [
-        "https://media.tenor.com/8K3zVfW2XwAAAAAC/anime-love-heart.gif",
-        "https://media.tenor.com/2Z4vF3WqY2AAAAAC/valentine-anime.gif",
-        "https://media.tenor.com/W3qYzVf2X0AAAAAC/couple-anime.gif"
+        "https://media.tenor.com/8K3zVfW2XwAAAAAC/anime-love-heart.gif"
     ],
-    welcome: [
-        "https://media.tenor.com/9W3qZfY3XwAAAAAC/anime-welcome.gif",
-        "https://media.tenor.com/5K2zXfV3W0AAAAAC/welcome-anime.gif",
-        "https://media.tenor.com/L3qY2zFvX0AAAAAC/anime-hello.gif"
-    ],
-    goodbye: [
-        "https://media.tenor.com/8W3qY2zfX0AAAAAC/anime-goodbye.gif",
-        "https://media.tenor.com/2Z4vX3WfY0AAAAAC/sad-goodbye-anime.gif",
-        "https://media.tenor.com/B3qYzV2fX0AAAAAC/wave-goodbye.gif"
+    game: [
+        "https://media.tenor.com/3o7btPCcdNniyf0ArS/giphy.gif"
     ]
 };
 
@@ -125,11 +98,10 @@ function pickGif(key) {
 
 async function sendWithGif(api, event, body, gifKey, mentions = []) {
     try {
-        const gifUrl = pickGif(gifKey);
-        const res = await axios.get(gifUrl, { responseType: 'stream', timeout: 8000 });
+        const url = pickGif(gifKey);
+        const res = await axios.get(url, { responseType: 'stream', timeout: 8000 });
         api.sendMessage({ body, mentions, attachment: res.data }, event.threadID);
     } catch (e) {
-        // GIF fail হলে শুধু টেক্সট
         api.sendMessage({ body, mentions }, event.threadID);
     }
 }
@@ -165,9 +137,8 @@ module.exports = {
             const rules = db.groups[threadID]?.rules || "No rules set yet";
             const user = getUser(db, senderID);
 
-            const helpMsg = `
-╔══════════════════════════════════╗
-   DEAD DESTROYER - HELP MENU
+            const helpMsg = `╔══════════════════════════════════╗
+     DEAD DESTROYER - HELP MENU
 ╚══════════════════════════════════╝
 
 [ 01 ] USER INFO
@@ -188,69 +159,80 @@ Admin   : ${adminNames}
 ──────────────────────────────────
 ${rules}
 
-[ 04 ] COMMAND LIST
+[ 04 ] CORE COMMANDS
 ──────────────────────────────────
-CORE
-  1. /help    - This menu
-  2. /ping    - Bot status
-  3. /uid     - Your ID
-  4. /owner   - Owner info
+1.  /help     - This menu
+2.  /ping     - Bot status
+3.  /uid      - Your ID
+4.  /owner    - Owner info
+5.  /game     - Game menu
 
-GROUP (Admin+)
-  5. /groupinfo  6. /adminlist
-  7. /members    8. /tagall
-  9. /tagadmin   10. /rules
- 11. /setrules
-
-MODERATION (Admin+)
- 12. /kick @user    13. /ban @user
- 14. /warn @user    15. /inactive
- 16. /autokick      17. /lock
- 18. /unlock
-
-NICKNAME (Admin+)
- 19. /autonick @user [name]
- 20. /resetnick @user
- 21. /setallnick [name]
-
-ANIME GIF
- 22. /hug @user   23. /kiss @user
- 24. /slap @user  25. /pat @user
- 26. /dance       27. /cry
- 28. /laugh
-
-ECONOMY
- 29. /balance     30. /daily
- 31. /work        32. /gamble [amt]
- 33. /slots [amt] 34. /rob @user
- 35. /shop        36. /buy [item]
- 37. /top
-
-FUN
- 38. /pair        39. /ship
- 40. /truth       41. /dare
- 42. /roast
-
-UTILITY
- 43. /say [text]  44. /poll [text]
- 45. /ghost       46. /vid [link]
-
-BOT ADMIN
- 47. /status      48. /maintenance
- 49. /botadmins
-
-OWNER
- 50. /addadmin @user
- 51. /removeadmin @user
- 52. /restart
-
-[ 05 ] HOW TO USE
+[ 05 ] GROUP COMMANDS (Admin+)
 ──────────────────────────────────
-- Type /help for menu
-- Type /balance for coins
-- Type /daily for reward
-- Type /pair for matchmaking
-- Type "bot active" to check
+6.  /groupinfo    7. /adminlist
+8.  /members      9. /tagall
+10. /tagadmin    11. /rules
+12. /setrules
+
+[ 06 ] MODERATION (Admin+)
+──────────────────────────────────
+13. /kick @user
+14. /ban @user
+15. /warn @user
+16. /inactive
+17. /autokick on/off
+18. /lock
+19. /unlock
+
+[ 07 ] NICKNAME (Admin+)
+──────────────────────────────────
+20. /autonick @user [name]
+21. /resetnick @user
+22. /setallnick [name]
+
+[ 08 ] ANIME GIF
+──────────────────────────────────
+23. /hug @user    24. /kiss @user
+25. /slap @user   26. /pat @user
+27. /dance        28. /cry
+29. /laugh
+
+[ 09 ] GAMES
+──────────────────────────────────
+30. /dice        31. /coin
+32. /rps         33. /random
+34. /choose      35. /8ball
+36. /quiz        37. /trivia
+
+[ 10 ] ECONOMY
+──────────────────────────────────
+38. /balance     39. /daily
+40. /work        41. /gamble [amt]
+42. /slots [amt] 43. /rob @user
+44. /shop        45. /buy [item]
+46. /top
+
+[ 11 ] FUN
+──────────────────────────────────
+47. /pair        48. /ship
+49. /truth       50. /dare
+51. /roast
+
+[ 12 ] UTILITY
+──────────────────────────────────
+52. /say [text]  53. /poll [text]
+54. /ghost       55. /vid [link]
+
+[ 13 ] BOT ADMIN
+──────────────────────────────────
+56. /status      57. /maintenance
+58. /botadmins
+
+[ 14 ] OWNER
+──────────────────────────────────
+59. /addadmin @user
+60. /removeadmin @user
+61. /restart
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DEAD DESTROYER ${config.version}
@@ -276,7 +258,6 @@ Developer: ${config.developer}
         api.sendMessage(`Owner: ${info.name}\nID: ${config.owner}\nDeveloper: ${config.developer}`, event.threadID);
     },
 
-    // ==================== UID (Fixed) ====================
     uid: async (api, event, args) => {
         try {
             const mentions = Object.keys(event.mentions || {});
@@ -290,9 +271,99 @@ Developer: ${config.developer}
                 api.sendMessage(`Your Name: ${info.name}\nYour UID: ${event.senderID}\nProfile: https://facebook.com/${event.senderID}`, event.threadID);
             }
         } catch (e) {
-            console.error("uid error:", e);
             api.sendMessage("Failed to load UID.", event.threadID);
         }
+    },
+
+    // ==================== GAME MENU ====================
+    game: async (api, event, args, config) => {
+        try {
+            const gamesList = `🎮 GAME ZONE 🎮
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎲 /dice        - Roll a dice
+🪙 /coin        - Flip a coin
+🎰 /slots [amt] - Slot machine
+🃏 /gamble [amt]- Gamble coins
+✊ /rps [move]  - Rock Paper Scissors
+🔢 /random      - Random number
+🤔 /choose      - Pick from options
+🎱 /8ball       - Magic 8-Ball
+❓ /quiz        - Quiz question
+🧠 /trivia      - Trivia question
+💕 /pair        - Matchmaking
+💘 /ship        - Love calculator
+━━━━━━━━━━━━━━━━━━━━━━━━
+Use any command to play!
+🤖 ${config.botName}`;
+
+            await sendWithGif(api, event, gamesList, 'game');
+        } catch (e) {
+            api.sendMessage("Failed to load games.", event.threadID);
+        }
+    },
+
+    // ==================== GAME COMMANDS ====================
+    dice: (api, event) => {
+        const result = Math.floor(Math.random() * 6) + 1;
+        api.sendMessage(`🎲 Dice rolled: ${result}`, event.threadID);
+    },
+
+    coin: (api, event) => {
+        const result = Math.random() < 0.5 ? "HEADS" : "TAILS";
+        api.sendMessage(`🪙 Coin flip: ${result}`, event.threadID);
+    },
+
+    rps: (api, event, args) => {
+        const moves = ["rock", "paper", "scissors"];
+        const botMove = moves[Math.floor(Math.random() * 3)];
+        const userMove = args[0]?.toLowerCase();
+        if (!userMove || !moves.includes(userMove)) {
+            return api.sendMessage("Usage: /rps [rock/paper/scissors]", event.threadID);
+        }
+        let result;
+        if (userMove === botMove) result = "TIE!";
+        else if (
+            (userMove === "rock" && botMove === "scissors") ||
+            (userMove === "paper" && botMove === "rock") ||
+            (userMove === "scissors" && botMove === "paper")
+        ) result = "YOU WIN!";
+        else result = "YOU LOSE!";
+        api.sendMessage(`✊ RPS\nYou: ${userMove}\nBot: ${botMove}\n━━━━━━━━━━━━\nResult: ${result}`, event.threadID);
+    },
+
+    random: (api, event, args) => {
+        const min = parseInt(args[0]) || 1;
+        const max = parseInt(args[1]) || 100;
+        if (min >= max) return api.sendMessage("Usage: /random 1 100", event.threadID);
+        const result = Math.floor(Math.random() * (max - min + 1)) + min;
+        api.sendMessage(`🔢 Random (${min}-${max}): ${result}`, event.threadID);
+    },
+
+    choose: (api, event, args) => {
+        const text = args.join(" ");
+        if (!text) return api.sendMessage("Usage: /choose option1 | option2", event.threadID);
+        const options = text.split("|").map(o => o.trim()).filter(o => o);
+        if (options.length < 2) return api.sendMessage("Provide at least 2 options separated by |", event.threadID);
+        const choice = options[Math.floor(Math.random() * options.length)];
+        api.sendMessage(`🤔 I choose: ${choice}`, event.threadID);
+    },
+
+    '8ball': (api, event, args) => {
+        const q = args.join(" ");
+        if (!q) return api.sendMessage("Usage: /8ball [question]", event.threadID);
+        const answers = ["Yes, definitely.", "No, not at all.", "Maybe...", "Ask again later.", "The stars say yes.", "Don't count on it.", "Most likely.", "Very doubtful."];
+        const answer = answers[Math.floor(Math.random() * answers.length)];
+        api.sendMessage(`🎱 Q: ${q}\nA: ${answer}`, event.threadID);
+    },
+
+    quiz: (api, event) => {
+        const q = ["What is the capital of Bangladesh?", "How many continents?", "What is 5 + 5?", "Who invented the light bulb?", "What color is the sky?"];
+        api.sendMessage(`❓ Quiz: ${q[Math.floor(Math.random() * q.length)]}`, event.threadID);
+    },
+
+    trivia: (api, event) => {
+        const t = ["Honey never spoils.", "Octopuses have three hearts.", "A day on Venus is longer than a year.", "Bananas are berries.", "Eiffel Tower grows in summer."];
+        api.sendMessage(`🧠 Trivia: Did you know? ${t[Math.floor(Math.random() * t.length)]}`, event.threadID);
     },
 
     // ==================== GROUP ====================
@@ -319,16 +390,14 @@ Developer: ${config.developer}
                 mentions.push({ tag: u.name, id: a.id });
             }
             api.sendMessage({ body: msg, mentions }, event.threadID);
-        } catch (e) {
-            api.sendMessage("Failed to load.", event.threadID);
-        }
+        } catch (e) { api.sendMessage("Failed.", event.threadID); }
     },
 
     members: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         api.getThreadInfo(event.threadID, (err, info) => {
-            if (err) return api.sendMessage("Failed to load.", event.threadID);
+            if (err) return api.sendMessage("Failed.", event.threadID);
             api.sendMessage(`Total members: ${info.participantIDs.length}`, event.threadID);
         });
     },
@@ -354,7 +423,7 @@ Developer: ${config.developer}
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         try {
             const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-            if (!info) return api.sendMessage("Failed to load.", event.threadID);
+            if (!info) return api.sendMessage("Failed.", event.threadID);
             const members = info.participantIDs.filter(id => id !== api.getCurrentUserID());
             const mentions = [];
             let body = "Attention everyone:\n------------------------------\n";
@@ -365,9 +434,7 @@ Developer: ${config.developer}
             }
             body += `\n------------------------------\nTotal: ${info.participantIDs.length}\n${config.botName}`;
             api.sendMessage({ body, mentions }, event.threadID);
-        } catch (e) {
-            api.sendMessage("Tag failed.", event.threadID);
-        }
+        } catch (e) { api.sendMessage("Tag failed.", event.threadID); }
     },
 
     tagadmin: async (api, event, args, config) => {
@@ -375,7 +442,7 @@ Developer: ${config.developer}
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         try {
             const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-            if (!info) return api.sendMessage("Failed to load.", event.threadID);
+            if (!info) return api.sendMessage("Failed.", event.threadID);
             const mentions = [];
             let body = "Attention admins:\n------------------------------\n";
             for (const a of info.adminIDs) {
@@ -385,9 +452,7 @@ Developer: ${config.developer}
             }
             body += `\n------------------------------\n${config.botName}`;
             api.sendMessage({ body, mentions }, event.threadID);
-        } catch (e) {
-            api.sendMessage("Tag failed.", event.threadID);
-        }
+        } catch (e) { api.sendMessage("Tag failed.", event.threadID); }
     },
 
     // ==================== MODERATION ====================
@@ -427,20 +492,73 @@ Developer: ${config.developer}
         api.sendMessage(`Warning issued. Total: ${db.warnings[event.threadID][target]}`, event.threadID);
     },
 
+    // ==================== INACTIVE ====================
     inactive: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-        api.sendMessage("Loading inactive members...", event.threadID);
+
+        try {
+            const db = getDB();
+            if (!db.activity || !db.activity[event.threadID]) {
+                return api.sendMessage("No activity data yet.", event.threadID);
+            }
+
+            const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
+            if (!info) return api.sendMessage("Failed.", event.threadID);
+
+            const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            const inactiveList = [];
+            const botID = api.getCurrentUserID();
+            const admins = info.adminIDs.map(a => a.id);
+
+            for (const memberID of info.participantIDs) {
+                if (memberID === botID) continue;
+                if (admins.includes(memberID)) continue;
+                const lastActive = db.activity[event.threadID][memberID];
+                if (!lastActive) continue;
+                if (now - lastActive > SEVEN_DAYS) {
+                    const days = Math.floor((now - lastActive) / (24 * 60 * 60 * 1000));
+                    const u = await new Promise(r => api.getUserInfo(memberID, (e, ret) => r(e ? { name: "Unknown" } : ret[memberID])));
+                    inactiveList.push(`${u.name} - ${days} days`);
+                }
+            }
+
+            if (inactiveList.length === 0) {
+                return api.sendMessage("No inactive members (7+ days).", event.threadID);
+            }
+
+            const msg = `Inactive Members (7+ days):
+━━━━━━━━━━━━━━━━━━━━━━━━
+${inactiveList.join("\n")}
+━━━━━━━━━━━━━━━━━━━━━━━━
+Total: ${inactiveList.length}`;
+
+            api.sendMessage(msg, event.threadID);
+        } catch (e) {
+            console.error("inactive error:", e);
+            api.sendMessage("Failed.", event.threadID);
+        }
     },
 
     autokick: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
+
         const db = getDB();
         if (!db.settings) db.settings = {};
-        db.settings.autoKick = args[0] === "on";
-        saveDB(db);
-        api.sendMessage(`Auto Kick: ${db.settings.autoKick ? "ON" : "OFF"}`, event.threadID);
+        
+        if (args[0] === "on") {
+            db.settings.autoKick = true;
+            saveDB(db);
+            api.sendMessage("Auto-Kick enabled. Inactive members (7+ days) will be kicked every 24 hours.", event.threadID);
+        } else if (args[0] === "off") {
+            db.settings.autoKick = false;
+            saveDB(db);
+            api.sendMessage("Auto-Kick disabled.", event.threadID);
+        } else {
+            api.sendMessage(`Auto-Kick: ${db.settings.autoKick ? "ON" : "OFF"}\n\nUsage:\n/autokick on\n/autokick off`, event.threadID);
+        }
     },
 
     lock: async (api, event, args, config) => {
@@ -475,7 +593,7 @@ Developer: ${config.developer}
         const target = Object.keys(event.mentions || {})[0];
         if (!target) return api.sendMessage("Usage: /autonick @user [name]", event.threadID);
         const nickname = args.filter(a => !a.startsWith('@')).join(" ").trim();
-        if (!nickname) return api.sendMessage("Please provide a nickname.", event.threadID);
+        if (!nickname) return api.sendMessage("Provide a nickname.", event.threadID);
         if (nickname.length > 30) return api.sendMessage("Max 30 characters.", event.threadID);
         api.changeNickname(nickname, event.threadID, target, (err) => {
             if (err) return api.sendMessage("Failed. Bot may need admin.", event.threadID);
@@ -514,9 +632,7 @@ Developer: ${config.developer}
                 });
             }
             api.sendMessage(`Success: ${success}\nFailed: ${failed}`, event.threadID);
-        } catch (e) {
-            api.sendMessage("Error.", event.threadID);
-        }
+        } catch (e) { api.sendMessage("Error.", event.threadID); }
     },
 
     // ==================== ANIME GIF ====================
@@ -662,7 +778,7 @@ Buy: /buy [item]`;
     pair: async (api, event) => {
         try {
             const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-            if (!info) return api.sendMessage("Failed to load.", event.threadID);
+            if (!info) return api.sendMessage("Failed.", event.threadID);
             const members = info.participantIDs.filter(id => id !== api.getCurrentUserID());
             if (members.length < 2) return api.sendMessage("Need at least 2 members.", event.threadID);
             const sh = members.sort(() => 0.5 - Math.random());
@@ -670,23 +786,15 @@ Buy: /buy [item]`;
             const n1 = await new Promise(r => api.getUserInfo(u1, (e, ret) => r(e ? { name: "Unknown" } : ret[u1])));
             const n2 = await new Promise(r => api.getUserInfo(u2, (e, ret) => r(e ? { name: "Unknown" } : ret[u2])));
             const comp = Math.floor(Math.random() * 41) + 60;
-
             const msg = `Matchmaking Complete
 ------------------------------
 ${n1.name}  +  ${n2.name}
 ------------------------------
 Compatibility: ${comp}%
 ${comp >= 90 ? "PERFECT MATCH" : comp >= 75 ? "GREAT MATCH" : "GOOD MATCH"}`;
-
-            const mentions = [
-                { tag: n1.name, id: u1 },
-                { tag: n2.name, id: u2 }
-            ];
+            const mentions = [{ tag: n1.name, id: u1 }, { tag: n2.name, id: u2 }];
             await sendWithGif(api, event, msg, 'pair', mentions);
-        } catch (e) {
-            console.error("pair error:", e);
-            api.sendMessage("Pair failed.", event.threadID);
-        }
+        } catch (e) { api.sendMessage("Pair failed.", event.threadID); }
     },
 
     ship: async (api, event) => {
@@ -712,13 +820,9 @@ ${comp >= 90 ? "PERFECT MATCH" : comp >= 75 ? "GREAT MATCH" : "GOOD MATCH"}`;
 ${name1}  +  ${name2}
 ------------------------------
 Love: ${p}%
-
 ${p >= 90 ? "PERFECT COUPLE" : p >= 75 ? "GREAT PAIR" : "GOOD PAIR"}`;
             await sendWithGif(api, event, msg, 'ship');
-        } catch (e) {
-            console.error("ship error:", e);
-            api.sendMessage("Ship failed.", event.threadID);
-        }
+        } catch (e) { api.sendMessage("Ship failed.", event.threadID); }
     },
 
     truth: (api, event) => {
@@ -816,7 +920,7 @@ Bot Admins: ${config.botAdmins?.length || 0}`;
         if (newConfig.botAdmins.includes(target)) return api.sendMessage("Already admin.", event.threadID);
         newConfig.botAdmins.push(target);
         fs.writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
-        api.sendMessage("Bot admin added. Restart to apply.", event.threadID);
+        api.sendMessage("Bot admin added.", event.threadID);
     },
 
     removeadmin: async (api, event, args, config) => {

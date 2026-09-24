@@ -39,6 +39,8 @@ const lastMsg = {};
 login({ appState }, (err, api) => {
     if (err) return console.error("Login failed:", err);
 
+    global.globalBotApi = api;
+
     api.setOptions({
         listenEvents: true,
         selfListen: false
@@ -48,6 +50,18 @@ login({ appState }, (err, api) => {
 
     api.listenMqtt(async (err, event) => {
         if (err) return console.error(err);
+
+        // ==================== ACTIVITY TRACKER ====================
+        if (event.type === "message" && event.senderID && event.threadID) {
+            try {
+                const dbPath = './database.json';
+                const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+                if (!db.activity) db.activity = {};
+                if (!db.activity[event.threadID]) db.activity[event.threadID] = {};
+                db.activity[event.threadID][event.senderID] = Date.now();
+                fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+            } catch (e) {}
+        }
 
         // ==================== MESSAGE EVENT ====================
         if (event.type === "message") {
@@ -99,14 +113,12 @@ login({ appState }, (err, api) => {
 
             api.getThreadInfo(tid, async (err, info) => {
                 if (err) return;
-
                 const groupName = info?.threadName || "Our Group";
                 const memberCount = info?.participantIDs?.length || 0;
                 const groupImage = info?.imageSrc || null;
 
                 for (const p of added) {
                     const name = p.fullName || "New Member";
-
                     const welcomeMsg = `🌸 Welcome ${name}!
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🌹 To our group family!
@@ -134,24 +146,10 @@ login({ appState }, (err, api) => {
                             }, tid);
                         }
                     } else {
-                        const welcomeGifs = [
-                            "https://media.tenor.com/9W3qZfY3XwAAAAAC/anime-welcome.gif",
-                            "https://media.tenor.com/5K2zXfV3W0AAAAAC/welcome-anime.gif"
-                        ];
-                        const gif = welcomeGifs[Math.floor(Math.random() * welcomeGifs.length)];
-                        try {
-                            const gifRes = await axios.get(gif, { responseType: 'stream' });
-                            api.sendMessage({
-                                body: welcomeMsg,
-                                mentions: [{ tag: name, id: p.userFbId }],
-                                attachment: gifRes.data
-                            }, tid);
-                        } catch (e) {
-                            api.sendMessage({
-                                body: welcomeMsg,
-                                mentions: [{ tag: name, id: p.userFbId }]
-                            }, tid);
-                        }
+                        api.sendMessage({
+                            body: welcomeMsg,
+                            mentions: [{ tag: name, id: p.userFbId }]
+                        }, tid);
                     }
                 }
             });
@@ -167,7 +165,6 @@ login({ appState }, (err, api) => {
 
             api.getThreadInfo(tid, async (err, info) => {
                 if (err) return;
-
                 const groupName = info?.threadName || "Our Group";
                 const memberCount = info?.participantIDs?.length || 0;
                 const groupImage = info?.imageSrc || null;
@@ -208,26 +205,59 @@ Reason: Rule violation
                             api.sendMessage(leftMsg, tid);
                         }
                     } else {
-                        const leftGifs = [
-                            "https://media.tenor.com/8W3qY2zfX0AAAAAC/anime-goodbye.gif",
-                            "https://media.tenor.com/2Z4vX3WfY0AAAAAC/sad-goodbye-anime.gif"
-                        ];
-                        const gif = leftGifs[Math.floor(Math.random() * leftGifs.length)];
-                        try {
-                            const gifRes = await axios.get(gif, { responseType: 'stream' });
-                            api.sendMessage({
-                                body: leftMsg,
-                                attachment: gifRes.data
-                            }, tid);
-                        } catch (e) {
-                            api.sendMessage(leftMsg, tid);
-                        }
+                        api.sendMessage(leftMsg, tid);
                     }
                 });
             });
         }
     });
 });
+
+// ==================== AUTO-KICK SCHEDULER ====================
+// প্রতি ২৪ ঘণ্টায় একবার চেক করবে
+setInterval(async () => {
+    try {
+        const dbPath = './database.json';
+        const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+        
+        if (!db.settings || !db.settings.autoKick) return;
+        if (!db.activity) return;
+        if (!global.globalBotApi) return;
+
+        const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+
+        for (const threadID in db.activity) {
+            const members = db.activity[threadID];
+
+            global.globalBotApi.getThreadInfo(threadID, async (err, info) => {
+                if (err) return;
+                if (!info || !info.participantIDs) return;
+
+                const botID = global.globalBotApi.getCurrentUserID();
+                const admins = info.adminIDs.map(a => a.id);
+
+                for (const memberID of info.participantIDs) {
+                    if (memberID === botID) continue;
+                    if (admins.includes(memberID)) continue;
+
+                    const lastActive = members[memberID];
+                    if (!lastActive) continue;
+
+                    if (now - lastActive > SEVEN_DAYS) {
+                        global.globalBotApi.removeUserFromGroup(memberID, threadID, (err) => {
+                            if (!err) {
+                                console.log(`[Auto-Kick] Kicked inactive user from ${threadID}`);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    } catch (e) {
+        console.error("[Auto-Kick] Error:", e.message);
+    }
+}, 24 * 60 * 60 * 1000);
 
 // ==================== Health Check Server ====================
 const PORT = process.env.PORT || 3000;
