@@ -2,7 +2,7 @@ const fs = require('fs');
 const axios = require('axios');
 const dbFile = './database.json';
 
-// ==================== 🗄️ Database Helpers ====================
+// ==================== Database Helpers ====================
 function getDB() {
     try {
         return JSON.parse(fs.readFileSync(dbFile, 'utf8'));
@@ -21,52 +21,105 @@ function getUser(db, id) {
     return db.users[id];
 }
 
-// ==================== 🔐 Permission Checker ====================
+// ==================== Permission Checker ====================
 async function checkPermission(api, event, config, requiredLevel) {
     const senderID = event.senderID;
     const threadID = event.threadID;
     let userLevel = 0;
-    let userRole = "👤 User";
+    let userRole = "User";
 
     if (senderID === config.owner) {
         userLevel = 3;
-        userRole = "👑 Owner";
+        userRole = "Owner";
     } else if (config.botAdmins && config.botAdmins.includes(senderID)) {
         userLevel = 2;
-        userRole = "🛡️ Bot Admin";
+        userRole = "Bot Admin";
     } else {
         try {
             const info = await new Promise(r => api.getThreadInfo(threadID, (e, i) => r(e ? null : i)));
             if (info && info.adminIDs && info.adminIDs.some(a => a.id === senderID)) {
                 userLevel = 1;
-                userRole = "👑 Group Admin";
+                userRole = "Group Admin";
             }
         } catch (e) {}
     }
-
     return { allowed: userLevel >= requiredLevel, userLevel, userRole };
 }
 
 function sendPermissionDenied(api, event, requiredLevel) {
-    const levelNames = { 1: "👑 Group Admin", 2: "🛡️ Bot Admin", 3: "👑 Owner" };
+    const levelNames = { 1: "Group Admin", 2: "Bot Admin", 3: "Owner" };
     api.sendMessage(
-        `🚫 আপনি এই কমান্ড ব্যবহারের অনুমতি রাখেন না!\n\n🔒 প্রয়োজনীয়: ${levelNames[requiredLevel]}\n👤 আপনার রোল: সাধারণ সদস্য\n💡 অ্যাডমিনের সাথে যোগাযোগ করুন।`,
+        `Permission denied.\nRequired: ${levelNames[requiredLevel]}\nYour role: User`,
         event.threadID
     );
 }
 
-// ==================== 🎬 GIF Libraries ====================
+// ==================== GIF Libraries ====================
+// ==================== 🎬 Anime & Emotional GIF Library ====================
 const gifLib = {
-    help: ["https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif", "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"],
-    hug: ["https://media.giphy.com/media/l2QDM9Jnim1YVILXa/giphy.gif", "https://media.giphy.com/media/3o7abB06u9bNzA8lu8/giphy.gif"],
-    kiss: ["https://media.giphy.com/media/G3va31o04lMKM/giphy.gif", "https://media.giphy.com/media/11k3uN9S0F7Xy8/giphy.gif"],
-    slap: ["https://media.giphy.com/media/Gf3AUz3eBNbTW/giphy.gif", "https://media.giphy.com/media/Zau0yrl17uzdK/giphy.gif"],
-    pat: ["https://media.giphy.com/media/109ltuoSQT212w/giphy.gif", "https://media.giphy.com/media/ARSp9T7wwxNcs/giphy.gif"],
-    dance: ["https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif", "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif"],
-    cry: ["https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif", "https://media.giphy.com/media/OPU6wzx8JrHna/giphy.gif"],
-    laugh: ["https://media.giphy.com/media/10JhviFuU2gWD6/giphy.gif", "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"],
-    pair: ["https://media.giphy.com/media/od5H3PmEG5EVq/giphy.gif", "https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif"],
-    ship: ["https://media.giphy.com/media/G3va31o04lMKM/giphy.gif", "https://media.giphy.com/media/l2QDM9Jnim1YVILXa/giphy.gif"]
+    help: [
+        "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
+        "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif",
+        "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif"
+    ],
+    hug: [
+        "https://media.giphy.com/media/l2QDM9Jnim1YVILXa/giphy.gif",
+        "https://media.giphy.com/media/3o7abB06u9bNzA8lu8/giphy.gif",
+        "https://media.giphy.com/media/od5H3PmEG5EVq/giphy.gif",
+        "https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif"
+    ],
+    kiss: [
+        "https://media.giphy.com/media/G3va31o04lMKM/giphy.gif",
+        "https://media.giphy.com/media/11k3uN9S0F7Xy8/giphy.gif",
+        "https://media.giphy.com/media/3o6ZsYm5xYc0NhyWsw/giphy.gif"
+    ],
+    slap: [
+        "https://media.giphy.com/media/Gf3AUz3eBNbTW/giphy.gif",
+        "https://media.giphy.com/media/Zau0yrl17uzdK/giphy.gif",
+        "https://media.giphy.com/media/3o6Zt6ML6BklcajjsA/giphy.gif"
+    ],
+    pat: [
+        "https://media.giphy.com/media/109ltuoSQT212w/giphy.gif",
+        "https://media.giphy.com/media/ARSp9T7wwxNcs/giphy.gif",
+        "https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif"
+    ],
+    dance: [
+        "https://media.giphy.com/media/blSTtZehjAZ8I/giphy.gif",
+        "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
+        "https://media.giphy.com/media/3o7btPCcdNniyf0ArS/giphy.gif"
+    ],
+    cry: [
+        "https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif",
+        "https://media.giphy.com/media/OPU6wzx8JrHna/giphy.gif",
+        "https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif",
+        "https://media.giphy.com/media/xT9IgG50Fb7Mi0prBC/giphy.gif"
+    ],
+    laugh: [
+        "https://media.giphy.com/media/10JhviFuU2gWD6/giphy.gif",
+        "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif",
+        "https://media.giphy.com/media/3o6Zt8Me0j9kaZLLXG/giphy.gif"
+    ],
+    pair: [
+        "https://media.giphy.com/media/od5H3PmEG5EVq/giphy.gif",
+        "https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif",
+        "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
+        "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
+    ],
+    ship: [
+        "https://media.giphy.com/media/G3va31o04lMKM/giphy.gif",
+        "https://media.giphy.com/media/l2QDM9Jnim1YVILXa/giphy.gif",
+        "https://media.giphy.com/media/11k3uN9S0F7Xy8/giphy.gif"
+    ],
+    welcome: [
+        "https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif",
+        "https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif",
+        "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
+    ],
+    goodbye: [
+        "https://media.giphy.com/media/d2lcHJTG5Tscg/giphy.gif",
+        "https://media.giphy.com/media/OPU6wzx8JrHna/giphy.gif",
+        "https://media.giphy.com/media/3o6ZtaO9BZHcOjmErm/giphy.gif"
+    ]
 };
 
 function pickGif(key) {
@@ -84,77 +137,77 @@ async function sendWithGif(api, event, body, gifKey, mentions = []) {
     }
 }
 
-// ==================== 📦 Module Exports ====================
+// ==================== Module Exports ====================
 module.exports = {
 
-    // ==================== 🧩 Core ====================
+    // ==================== Core ====================
     help: async (api, event, args, config) => {
         try {
             const senderID = event.senderID;
-            const threadID = event.threadID;
             const perm = await checkPermission(api, event, config, 0);
             const info = await new Promise(r => api.getUserInfo(senderID, (e, ret) => r(e ? { name: "Unknown" } : ret[senderID])));
 
-            let publicCmds = `\n━━━━━━━━━━━━━━━━━━━━━━━━
-🌐 Public Commands
-━━━━━━━━━━━━━━━━━━━━━━━━
-🧩 /help /ping /uid
-💰 /balance /daily /work /gamble /slots /rob /shop /buy
-🎬 /hug /kiss /slap /pat /dance /cry /laugh
-🎮 /pair /ship /truth /dare /roast /top`;
+            let publicCmds = `
+------------------------------
+Public Commands
+------------------------------
+Core: /help /ping /uid /owner
+Economy: /balance /daily /work /gamble /slots /rob /shop /buy
+Fun: /hug /kiss /slap /pat /dance /cry /laugh /pair /ship /truth /dare /roast /top`;
 
-            let adminCmds = `\n━━━━━━━━━━━━━━━━━━━━━━━━
-👑 Group Admin Only
-━━━━━━━━━━━━━━━━━━━━━━━━
-⚔️ /kick /ban /warn
-📊 /tagall /tagadmin /members /adminlist /groupinfo
-🔒 /lock /unlock /autokick /antlink /dark
-📝 /say /poll`;
+            let adminCmds = `
+------------------------------
+Group Admin Only
+------------------------------
+/kick /ban /warn
+/tagall /tagadmin /members /adminlist /groupinfo
+/lock /unlock /autokick /antlink /dark
+/say /poll /autonick /resetnick /setallnick`;
 
-            let botAdminsCmds = `\n━━━━━━━━━━━━━━━━━━━━━━━━
-🛡️ Bot Admin Only
-━━━━━━━━━━━━━━━━━━━━━━━━
-📊 /status /maintenance /botadmins`;
+            let botAdminCmds = `
+------------------------------
+Bot Admin Only
+------------------------------
+/status /maintenance /botadmins`;
 
-            let ownerCmds = `\n━━━━━━━━━━━━━━━━━━━━━━━━
-👑 Owner Only
-━━━━━━━━━━━━━━━━━━━━━━━━
-➕ /addadmin /removeadmin /restart`;
+            let ownerCmds = `
+------------------------------
+Owner Only
+------------------------------
+/addadmin /removeadmin /restart`;
 
             let extra = "";
             if (perm.userLevel >= 1) extra += adminCmds;
-            if (perm.userLevel >= 2) extra += botAdminsCmds;
+            if (perm.userLevel >= 2) extra += botAdminCmds;
             if (perm.userLevel >= 3) extra += ownerCmds;
 
-            const msg = `╔══════════════════════════════╗
-      💀 DEAD DESTROYER 💀
-        ${config.version} — Help Menu
-╚══════════════════════════════╝
+            const msg = `${config.botName}
+${config.version} - Help Menu
 
-👤 নাম: ${info.name}
-🆔 আইডি: ${senderID}
-🎖️ রোল: ${perm.userRole}${publicCmds}${extra}
+Name: ${info.name}
+ID: ${senderID}
+Role: ${perm.userRole}${publicCmds}${extra}
 
-━━━━━━━━━━━━━━━━━━━━━━━━
-💀 Developed by ${config.developer}`;
+------------------------------
+Developer: ${config.developer}`;
 
             await sendWithGif(api, event, msg, 'help');
         } catch (err) {
             console.error("help error:", err);
-            api.sendMessage("❌ Help লোড হয়নি।", event.threadID);
+            api.sendMessage("Help menu failed to load.", event.threadID);
         }
     },
 
     ping: (api, event) => {
         const start = Date.now();
-        api.sendMessage("🏓 Pong!", event.threadID, () => {
-            api.sendMessage(`⚡ Response: ${Date.now() - start}ms`, event.threadID);
+        api.sendMessage("Pong", event.threadID, () => {
+            api.sendMessage(`Response: ${Date.now() - start}ms`, event.threadID);
         });
     },
 
     owner: async (api, event, args, config) => {
         const info = await new Promise(r => api.getUserInfo(config.owner, (e, ret) => r(e ? { name: "Unknown" } : ret[config.owner])));
-        api.sendMessage(`👑 Owner: ${info.name}\n🆔 ${config.owner}\n🛠️ Developer: ${config.developer}`, event.threadID);
+        api.sendMessage(`Owner: ${info.name}\nID: ${config.owner}\nDeveloper: ${config.developer}`, event.threadID);
     },
 
     uid: async (api, event) => {
@@ -163,25 +216,24 @@ module.exports = {
             if (mentions.length > 0) {
                 for (const id of mentions) {
                     const name = event.mentions[id].replace('@', '');
-                    api.sendMessage(`🆔 ${name}:\n📌 ${id}\n🔗 https://facebook.com/${id}`, event.threadID);
+                    api.sendMessage(`${name}\nID: ${id}\nProfile: https://facebook.com/${id}`, event.threadID);
                 }
             } else {
                 const info = await new Promise(r => api.getUserInfo(event.senderID, (e, ret) => r(e ? { name: "Unknown" } : ret[event.senderID])));
-                api.sendMessage(`🆔 আপনার আইডি: ${event.senderID}\n👤 নাম: ${info.name}\n🔗 https://facebook.com/${event.senderID}`, event.threadID);
+                api.sendMessage(`Your ID: ${event.senderID}\nName: ${info.name}\nProfile: https://facebook.com/${event.senderID}`, event.threadID);
             }
         } catch (e) {
-            api.sendMessage("❌ আইডি লোড হয়নি।", event.threadID);
+            api.sendMessage("Failed to load ID.", event.threadID);
         }
     },
 
-    // ==================== 📊 Group Info ====================
+    // ==================== Group Info ====================
     groupinfo: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-
         api.getThreadInfo(event.threadID, (err, info) => {
-            if (err) return api.sendMessage("❌ লোড হয়নি।", event.threadID);
-            api.sendMessage(`📊 গ্রুপ তথ্য:\n🏠 ${info.threadName}\n👥 মেম্বার: ${info.participantIDs.length}\n👑 অ্যাডমিন: ${info.adminIDs.length}\n🆔 ${event.threadID}`, event.threadID);
+            if (err) return api.sendMessage("Failed to load.", event.threadID);
+            api.sendMessage(`Group: ${info.threadName}\nMembers: ${info.participantIDs.length}\nAdmins: ${info.adminIDs.length}\nID: ${event.threadID}`, event.threadID);
         });
     },
 
@@ -190,17 +242,17 @@ module.exports = {
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         try {
             const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-            if (!info) return api.sendMessage("❌ লোড হয়নি।", event.threadID);
-            let msg = "👑 অ্যাডমিন লিস্ট:\n━━━━━━━━━━━━━━━━━\n";
+            if (!info) return api.sendMessage("Failed to load.", event.threadID);
+            let msg = "Admin List:\n------------------------------\n";
             const mentions = [];
             for (const a of info.adminIDs) {
                 const u = await new Promise(r => api.getUserInfo(a.id, (e, ret) => r(e ? { name: "Unknown" } : ret[a.id])));
-                msg += `👑 @${u.name}\n`;
+                msg += `@${u.name}\n`;
                 mentions.push({ tag: u.name, id: a.id });
             }
             api.sendMessage({ body: msg, mentions }, event.threadID);
         } catch (e) {
-            api.sendMessage("❌ লোড হয়নি।", event.threadID);
+            api.sendMessage("Failed to load.", event.threadID);
         }
     },
 
@@ -208,15 +260,15 @@ module.exports = {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         api.getThreadInfo(event.threadID, (err, info) => {
-            if (err) return api.sendMessage("❌ লোড হয়নি।", event.threadID);
-            api.sendMessage(`👥 মোট মেম্বার: ${info.participantIDs.length}`, event.threadID);
+            if (err) return api.sendMessage("Failed to load.", event.threadID);
+            api.sendMessage(`Total members: ${info.participantIDs.length}`, event.threadID);
         });
     },
 
     rules: async (api, event) => {
         const db = getDB();
-        const rules = db.groups[event.threadID]?.rules || "❌ কোনো নিয়ম নেই। /setrules লিখে অ্যাডমিন নিয়ম দিতে পারে।";
-        api.sendMessage(`📜 গ্রুপের নিয়মাবলী:\n${rules}`, event.threadID);
+        const rules = db.groups[event.threadID]?.rules || "No rules set yet.";
+        api.sendMessage(`Group Rules:\n${rules}`, event.threadID);
     },
 
     setrules: async (api, event, args, config) => {
@@ -224,9 +276,9 @@ module.exports = {
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         const db = getDB();
         if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
-        db.groups[event.threadID].rules = args.join(" ") || "কোনো নিয়ম নেই।";
+        db.groups[event.threadID].rules = args.join(" ") || "No rules set.";
         saveDB(db);
-        api.sendMessage("✅ নিয়ম সেট হয়েছে।", event.threadID);
+        api.sendMessage("Rules have been updated.", event.threadID);
     },
 
     tagall: async (api, event, args, config) => {
@@ -234,19 +286,19 @@ module.exports = {
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         try {
             const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-            if (!info) return api.sendMessage("❌ লোড হয়নি।", event.threadID);
+            if (!info) return api.sendMessage("Failed to load.", event.threadID);
             const members = info.participantIDs.filter(id => id !== api.getCurrentUserID());
             const mentions = [];
-            let body = "📢 সবার প্রতি ডাক! 📢\n━━━━━━━━━━━━━━━━━\n";
+            let body = "Attention everyone:\n------------------------------\n";
             for (const m of members) {
                 const u = await new Promise(r => api.getUserInfo(m, (e, ret) => r(e ? { name: "Unknown" } : ret[m])));
                 body += `@${u.name} `;
                 mentions.push({ tag: u.name, id: m });
             }
-            body += `\n━━━━━━━━━━━━━━━━━\n👥 মোট: ${info.participantIDs.length}\n💀 DEAD DESTROYER`;
+            body += `\n------------------------------\nTotal: ${info.participantIDs.length}\n${config.botName}`;
             api.sendMessage({ body, mentions }, event.threadID);
         } catch (e) {
-            api.sendMessage("❌ ট্যাগ হয়নি।", event.threadID);
+            api.sendMessage("Tag failed.", event.threadID);
         }
     },
 
@@ -255,31 +307,31 @@ module.exports = {
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         try {
             const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-            if (!info) return api.sendMessage("❌ লোড হয়নি।", event.threadID);
+            if (!info) return api.sendMessage("Failed to load.", event.threadID);
             const mentions = [];
-            let body = "👑 অ্যাডমিনদের প্রতি ডাক! 👑\n━━━━━━━━━━━━━━━━━\n";
+            let body = "Attention admins:\n------------------------------\n";
             for (const a of info.adminIDs) {
                 const u = await new Promise(r => api.getUserInfo(a.id, (e, ret) => r(e ? { name: "Unknown" } : ret[a.id])));
-                body += `👑 @${u.name} `;
+                body += `@${u.name} `;
                 mentions.push({ tag: u.name, id: a.id });
             }
-            body += `\n━━━━━━━━━━━━━━━━━\n💀 DEAD DESTROYER`;
+            body += `\n------------------------------\n${config.botName}`;
             api.sendMessage({ body, mentions }, event.threadID);
         } catch (e) {
-            api.sendMessage("❌ ট্যাগ হয়নি।", event.threadID);
+            api.sendMessage("Tag failed.", event.threadID);
         }
     },
 
-    // ==================== ⚔️ Moderation ====================
+    // ==================== Moderation ====================
     kick: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         const target = Object.keys(event.mentions || {})[0];
-        if (!target) return api.sendMessage("❌ ব্যবহার: /kick @user", event.threadID);
-        const reason = args.slice(1).join(" ") || "কারণ নেই";
+        if (!target) return api.sendMessage("Usage: /kick @user", event.threadID);
+        const reason = args.filter(a => !a.startsWith('@')).join(" ") || "No reason";
         api.removeUserFromGroup(target, event.threadID, (err) => {
-            if (err) return api.sendMessage("❌ কিক করা যায়নি। বট অ্যাডমিন হতে হবে।", event.threadID);
-            api.sendMessage(`👢 কিক করা হয়েছে। কারণ: ${reason}`, event.threadID);
+            if (err) return api.sendMessage("Failed to kick. Bot needs to be admin.", event.threadID);
+            api.sendMessage(`User kicked. Reason: ${reason}`, event.threadID);
         });
     },
 
@@ -287,30 +339,30 @@ module.exports = {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         const target = Object.keys(event.mentions || {})[0];
-        if (!target) return api.sendMessage("❌ ব্যবহার: /ban @user", event.threadID);
+        if (!target) return api.sendMessage("Usage: /ban @user", event.threadID);
         const db = getDB();
         if (!db.banned[event.threadID]) db.banned[event.threadID] = [];
         db.banned[event.threadID].push(target);
         saveDB(db);
-        api.sendMessage(`🚫 ইউজারকে ব্যান করা হয়েছে।`, event.threadID);
+        api.sendMessage("User has been banned.", event.threadID);
     },
 
     warn: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         const target = Object.keys(event.mentions || {})[0] || args[0];
-        if (!target) return api.sendMessage("❌ ব্যবহার: /warn @user", event.threadID);
+        if (!target) return api.sendMessage("Usage: /warn @user", event.threadID);
         const db = getDB();
         if (!db.warnings[event.threadID]) db.warnings[event.threadID] = {};
         db.warnings[event.threadID][target] = (db.warnings[event.threadID][target] || 0) + 1;
         saveDB(db);
-        api.sendMessage(`⚠️ ওয়ার্নিং দেওয়া হয়েছে। মোট: ${db.warnings[event.threadID][target]}`, event.threadID);
+        api.sendMessage(`Warning issued. Total: ${db.warnings[event.threadID][target]}`, event.threadID);
     },
 
     inactive: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-        api.sendMessage("📊 ৭ দিন নিষ্ক্রিয় মেম্বার লোড হচ্ছে...", event.threadID);
+        api.sendMessage("Loading inactive members...", event.threadID);
     },
 
     autokick: async (api, event, args, config) => {
@@ -320,7 +372,7 @@ module.exports = {
         if (!db.settings) db.settings = {};
         db.settings.autoKick = args[0] === "on";
         saveDB(db);
-        api.sendMessage(`⚙️ Auto Kick: ${db.settings.autoKick ? "ON ✅" : "OFF ❌"}`, event.threadID);
+        api.sendMessage(`Auto Kick: ${db.settings.autoKick ? "ON" : "OFF"}`, event.threadID);
     },
 
     lock: async (api, event, args, config) => {
@@ -330,10 +382,10 @@ module.exports = {
         if (!db.settings) db.settings = {};
         if (args[0] === "unlock") {
             db.settings.botLock = false;
-            api.sendMessage("🔓 আনলক হয়েছে।", event.threadID);
+            api.sendMessage("Bot unlocked.", event.threadID);
         } else {
             db.settings.botLock = true;
-            api.sendMessage("🔒 বট লক হয়েছে।", event.threadID);
+            api.sendMessage("Bot locked.", event.threadID);
         }
         saveDB(db);
     },
@@ -345,7 +397,7 @@ module.exports = {
         if (!db.settings) db.settings = {};
         db.settings.botLock = false;
         saveDB(db);
-        api.sendMessage("🔓 আনলক হয়েছে।", event.threadID);
+        api.sendMessage("Bot unlocked.", event.threadID);
     },
 
     antlink: async (api, event, args, config) => {
@@ -355,7 +407,7 @@ module.exports = {
         if (!db.settings) db.settings = {};
         db.settings.antiLink = args[0] === "on";
         saveDB(db);
-        api.sendMessage(`🔗 Anti Link: ${db.settings.antiLink ? "ON ✅" : "OFF ❌"}`, event.threadID);
+        api.sendMessage(`Anti Link: ${db.settings.antiLink ? "ON" : "OFF"}`, event.threadID);
     },
 
     dark: async (api, event, args, config) => {
@@ -365,61 +417,98 @@ module.exports = {
         if (!db.settings) db.settings = {};
         db.settings.darkMode = !db.settings.darkMode;
         saveDB(db);
-        api.sendMessage(`🌙 Dark Mode: ${db.settings.darkMode ? "ON" : "OFF"}`, event.threadID);
+        api.sendMessage(`Dark Mode: ${db.settings.darkMode ? "ON" : "OFF"}`, event.threadID);
     },
 
     say: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
         const m = args.join(" ");
-        if (!m) return api.sendMessage("❌ ব্যবহার: /say লেখা", event.threadID);
+        if (!m) return api.sendMessage("Usage: /say text", event.threadID);
         api.sendMessage(m, event.threadID);
     },
 
     poll: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-        const q = args.join(" ") || "আপনার মত?";
-        api.sendMessage(`📊 Poll: ${q}\n\n👍 হ্যাঁ\n👎 না`, event.threadID);
+        const q = args.join(" ") || "Your opinion?";
+        api.sendMessage(`Poll: ${q}\n\nYes / No`, event.threadID);
     },
 
-    // ==================== 🎬 GIF Fun ====================
-    hug: async (api, event) => {
-        await sendWithGif(api, event, "🤗 উষ্ণ আলিঙ্গন!", "hug");
+    // ==================== Nickname ====================
+    autonick: async (api, event, args, config) => {
+        const perm = await checkPermission(api, event, config, 1);
+        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
+        const target = Object.keys(event.mentions || {})[0];
+        if (!target) return api.sendMessage("Usage: /autonick @user [nickname]", event.threadID);
+        const nickname = args.filter(a => !a.startsWith('@')).join(" ").trim();
+        if (!nickname) return api.sendMessage("Please provide a nickname.", event.threadID);
+        if (nickname.length > 30) return api.sendMessage("Nickname must be under 30 characters.", event.threadID);
+        api.changeNickname(nickname, event.threadID, target, (err) => {
+            if (err) return api.sendMessage("Failed to set nickname. Bot may need admin.", event.threadID);
+            api.sendMessage(`Nickname set: ${nickname}`, event.threadID);
+        });
     },
 
+    resetnick: async (api, event, args, config) => {
+        const perm = await checkPermission(api, event, config, 1);
+        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
+        const target = Object.keys(event.mentions || {})[0] || args[0];
+        if (!target) return api.sendMessage("Usage: /resetnick @user", event.threadID);
+        api.changeNickname("", event.threadID, target, (err) => {
+            if (err) return api.sendMessage("Failed to reset.", event.threadID);
+            api.sendMessage("Nickname reset.", event.threadID);
+        });
+    },
+
+    setallnick: async (api, event, args, config) => {
+        const perm = await checkPermission(api, event, config, 1);
+        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
+        const nickname = args.join(" ").trim();
+        if (!nickname) return api.sendMessage("Usage: /setallnick [nickname]", event.threadID);
+        try {
+            const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
+            if (!info) return api.sendMessage("Failed to load.", event.threadID);
+            api.sendMessage(`Setting nickname for ${info.participantIDs.length} members...`, event.threadID);
+            let success = 0, failed = 0;
+            for (const id of info.participantIDs) {
+                if (id === api.getCurrentUserID()) continue;
+                await new Promise(resolve => {
+                    api.changeNickname(nickname, event.threadID, id, (err) => {
+                        if (err) failed++; else success++;
+                        setTimeout(resolve, 300);
+                    });
+                });
+            }
+            api.sendMessage(`Success: ${success}\nFailed: ${failed}`, event.threadID);
+        } catch (e) {
+            api.sendMessage("Something went wrong.", event.threadID);
+        }
+    },
+
+    // ==================== GIF Fun ====================
+    hug: async (api, event) => { await sendWithGif(api, event, "Warm hug", "hug"); },
     kiss: async (api, event) => {
-        const t = Object.keys(event.mentions || {})[0] || "কাউকে";
-        await sendWithGif(api, event, `💋 @${t} কে চুমু!`, "kiss");
+        const t = Object.keys(event.mentions || {})[0] || "someone";
+        await sendWithGif(api, event, `Kiss for @${t}`, "kiss");
     },
-
     slap: async (api, event) => {
-        const t = Object.keys(event.mentions || {})[0] || "কাউকে";
-        await sendWithGif(api, event, `👋 @${t} কে চড়!`, "slap");
+        const t = Object.keys(event.mentions || {})[0] || "someone";
+        await sendWithGif(api, event, `Slap for @${t}`, "slap");
     },
-
     pat: async (api, event) => {
-        const t = Object.keys(event.mentions || {})[0] || "কাউকে";
-        await sendWithGif(api, event, `🫶 @${t} কে আদর!`, "pat");
+        const t = Object.keys(event.mentions || {})[0] || "someone";
+        await sendWithGif(api, event, `Pat for @${t}`, "pat");
     },
+    dance: async (api, event) => { await sendWithGif(api, event, "Bot is dancing", "dance"); },
+    cry: async (api, event) => { await sendWithGif(api, event, "Bot is crying", "cry"); },
+    laugh: async (api, event) => { await sendWithGif(api, event, "Bot is laughing", "laugh"); },
 
-    dance: async (api, event) => {
-        await sendWithGif(api, event, "💃 বট নাচছে!", "dance");
-    },
-
-    cry: async (api, event) => {
-        await sendWithGif(api, event, "😭 বট কাঁদছে!", "cry");
-    },
-
-    laugh: async (api, event) => {
-        await sendWithGif(api, event, "😂 বট হাসছে!", "laugh");
-    },
-
-    // ==================== 💰 Economy ====================
+    // ==================== Economy ====================
     balance: (api, event) => {
         const db = getDB();
         const u = getUser(db, event.senderID);
-        api.sendMessage(`💰 আপনার ব্যালেন্স: ${u.coins} কয়েন`, event.threadID);
+        api.sendMessage(`Your balance: ${u.coins} coins`, event.threadID);
     },
 
     daily: (api, event) => {
@@ -428,12 +517,12 @@ module.exports = {
         const now = Date.now();
         if (now - u.lastDaily < 86400000) {
             const rem = Math.ceil((86400000 - (now - u.lastDaily)) / 3600000);
-            return api.sendMessage(`⏳ ${rem} ঘণ্টা পরে আবার চেষ্টা করুন।`, event.threadID);
+            return api.sendMessage(`Try again in ${rem} hours.`, event.threadID);
         }
         u.coins += 500;
         u.lastDaily = now;
         saveDB(db);
-        api.sendMessage(`✅ ৫০০ কয়েন পেয়েছেন! মোট: ${u.coins}`, event.threadID);
+        api.sendMessage(`You claimed 500 coins. Total: ${u.coins}`, event.threadID);
     },
 
     work: (api, event) => {
@@ -442,21 +531,21 @@ module.exports = {
         const e = Math.floor(Math.random() * 201) + 100;
         u.coins += e;
         saveDB(db);
-        api.sendMessage(`💼 ${e} কয়েন আয়! মোট: ${u.coins}`, event.threadID);
+        api.sendMessage(`You earned ${e} coins. Total: ${u.coins}`, event.threadID);
     },
 
     gamble: (api, event, args) => {
         const db = getDB();
         const u = getUser(db, event.senderID);
         const amt = parseInt(args[0]);
-        if (!amt || amt <= 0) return api.sendMessage("❌ ব্যবহার: /gamble 500", event.threadID);
-        if (amt > u.coins) return api.sendMessage("❌ পর্যাপ্ত কয়েন নেই।", event.threadID);
+        if (!amt || amt <= 0) return api.sendMessage("Usage: /gamble 500", event.threadID);
+        if (amt > u.coins) return api.sendMessage("Not enough coins.", event.threadID);
         if (Math.random() < 0.5) {
             u.coins += amt;
-            api.sendMessage(`🎉 জিতেছেন! +${amt}। মোট: ${u.coins}`, event.threadID);
+            api.sendMessage(`You won ${amt} coins. Total: ${u.coins}`, event.threadID);
         } else {
             u.coins -= amt;
-            api.sendMessage(`😢 হেরেছেন! -${amt}। মোট: ${u.coins}`, event.threadID);
+            api.sendMessage(`You lost ${amt} coins. Total: ${u.coins}`, event.threadID);
         }
         saveDB(db);
     },
@@ -465,18 +554,18 @@ module.exports = {
         const db = getDB();
         const u = getUser(db, event.senderID);
         const amt = parseInt(args[0]) || 100;
-        if (amt > u.coins) return api.sendMessage("❌ পর্যাপ্ত কয়েন নেই।", event.threadID);
-        const s = ["🍒", "🍋", "🍊", "🍇", "💎", "7️⃣"];
+        if (amt > u.coins) return api.sendMessage("Not enough coins.", event.threadID);
+        const s = ["cherry", "lemon", "orange", "grape", "gem", "seven"];
         const a = s[Math.floor(Math.random() * 6)];
         const b = s[Math.floor(Math.random() * 6)];
         const c = s[Math.floor(Math.random() * 6)];
         const r = `${a} | ${b} | ${c}`;
         if (a === b && b === c) {
             u.coins += amt * 3;
-            api.sendMessage(`🎰 JACKPOT! ${r}\n+${amt * 3}! মোট: ${u.coins}`, event.threadID);
+            api.sendMessage(`JACKPOT! ${r}\n+${amt * 3}. Total: ${u.coins}`, event.threadID);
         } else {
             u.coins -= amt;
-            api.sendMessage(`🎰 ${r}\n😢 -${amt}। মোট: ${u.coins}`, event.threadID);
+            api.sendMessage(`${r}\n-${amt}. Total: ${u.coins}`, event.threadID);
         }
         saveDB(db);
     },
@@ -485,30 +574,30 @@ module.exports = {
         const db = getDB();
         const u = getUser(db, event.senderID);
         const t = Object.keys(event.mentions || {})[0] || args[0];
-        if (!t) return api.sendMessage("❌ ব্যবহার: /rob @user", event.threadID);
+        if (!t) return api.sendMessage("Usage: /rob @user", event.threadID);
         const tu = getUser(db, t);
-        if (tu.shield) return api.sendMessage("🛡️ টার্গেটের শিল্ড আছে!", event.threadID);
+        if (tu.shield) return api.sendMessage("Target has shield. Rob failed.", event.threadID);
         const amt = Math.floor(Math.random() * 500) + 100;
-        if (tu.coins < amt) return api.sendMessage("❌ টার্গেটের পর্যাপ্ত কয়েন নেই।", event.threadID);
+        if (tu.coins < amt) return api.sendMessage("Target has insufficient coins.", event.threadID);
         tu.coins -= amt;
         u.coins += amt;
         saveDB(db);
-        api.sendMessage(`🦹 ${amt} কয়েন চুরি! মোট: ${u.coins}`, event.threadID);
+        api.sendMessage(`You stole ${amt} coins. Total: ${u.coins}`, event.threadID);
     },
 
     shop: (api, event) => {
-        const msg = `🛒 DEAD DESTROYER SHOP
-━━━━━━━━━━━━━━━━━
-🛡️ Shield - 2000 কয়েন
-📄 Insurance - 3500
-✖️ Double - 1500
-💎 VIP - 5000
-✨ Glow - 3000
-🍀 Lucky - 1000
-⚡ Booster - 1200
-🔒 Locker - 4000
-━━━━━━━━━━━━━━━━━
-কিনতে: /buy [আইটেম]`;
+        const msg = `SHOP
+------------------------------
+Shield - 2000 coins
+Insurance - 3500 coins
+Double - 1500 coins
+VIP - 5000 coins
+Glow - 3000 coins
+Lucky - 1000 coins
+Booster - 1200 coins
+Locker - 4000 coins
+------------------------------
+Buy: /buy [item]`;
         api.sendMessage(msg, event.threadID);
     },
 
@@ -517,38 +606,33 @@ module.exports = {
         const u = getUser(db, event.senderID);
         const it = args[0]?.toLowerCase();
         const prices = { shield: 2000, insurance: 3500, double: 1500, vip: 5000, glow: 3000, lucky: 1000, booster: 1200, locker: 4000 };
-        if (!prices[it]) return api.sendMessage("❌ ব্যবহার: /buy [shield/insurance/double/vip/glow/lucky/booster/locker]", event.threadID);
-        if (u.coins < prices[it]) return api.sendMessage(`❌ দরকার: ${prices[it]} কয়েন`, event.threadID);
+        if (!prices[it]) return api.sendMessage("Usage: /buy [shield/insurance/double/vip/glow/lucky/booster/locker]", event.threadID);
+        if (u.coins < prices[it]) return api.sendMessage(`Need ${prices[it]} coins.`, event.threadID);
         u.coins -= prices[it];
         u[it] = true;
         saveDB(db);
-        api.sendMessage(`✅ ${it} কিনেছেন! বাকি: ${u.coins}`, event.threadID);
+        api.sendMessage(`Purchased ${it}. Remaining: ${u.coins}`, event.threadID);
     },
 
-    // ==================== 🎮 Fun ====================
+    // ==================== Fun ====================
     pair: async (api, event) => {
         try {
             const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-            if (!info) return api.sendMessage("❌ লোড হয়নি।", event.threadID);
+            if (!info) return api.sendMessage("Failed to load.", event.threadID);
             const members = info.participantIDs.filter(id => id !== api.getCurrentUserID());
-            if (members.length < 2) return api.sendMessage("❌ অন্তত ২ জন দরকার।", event.threadID);
+            if (members.length < 2) return api.sendMessage("Need at least 2 members.", event.threadID);
             const sh = members.sort(() => 0.5 - Math.random());
             const u1 = sh[0], u2 = sh[1];
             const n1 = await new Promise(r => api.getUserInfo(u1, (e, ret) => r(e ? { name: "Unknown" } : ret[u1])));
             const n2 = await new Promise(r => api.getUserInfo(u2, (e, ret) => r(e ? { name: "Unknown" } : ret[u2])));
             const comp = Math.floor(Math.random() * 41) + 60;
 
-            const msg = `💕 Matchmaking Complete 💕
-━━━━━━━━━━━━━━━━━━━━━━
-❤️ ${n1.name} ❤️
-        ➕
-💙 ${n2.name} 💙
-━━━━━━━━━━━━━━━━━━━━━━
-💌 Destiny has written your names together 💌
-💫 May your bond last forever ✨
-
-💖 Compatibility: ${comp}%
-${comp >= 90 ? "🔥 Perfect Match!" : comp >= 75 ? "💕 Great Match!" : "💖 Good Match!"}`;
+            const msg = `Matchmaking Complete
+------------------------------
+${n1.name}  +  ${n2.name}
+------------------------------
+Compatibility: ${comp}%
+${comp >= 90 ? "Perfect Match" : comp >= 75 ? "Great Match" : "Good Match"}`;
 
             const mentions = [
                 { tag: n1.name, id: u1 },
@@ -556,7 +640,7 @@ ${comp >= 90 ? "🔥 Perfect Match!" : comp >= 75 ? "💕 Great Match!" : "💖 
             ];
             await sendWithGif(api, event, msg, 'pair', mentions);
         } catch (e) {
-            api.sendMessage("❌ পেয়ার হয়নি।", event.threadID);
+            api.sendMessage("Pair failed.", event.threadID);
         }
     },
 
@@ -578,94 +662,80 @@ ${comp >= 90 ? "🔥 Perfect Match!" : comp >= 75 ? "💕 Great Match!" : "💖 
                 name1 = i1.name; name2 = i2.name;
             }
             const p = Math.floor(Math.random() * 41) + 60;
-            const hearts = p >= 90 ? "💖💖💖💖💖" : p >= 75 ? "💖💖💖💖" : "💖💖💖";
-            const msg = `💘 Love Calculator 💘
-━━━━━━━━━━━━━━━━━━━━━━
-❤️ ${name1}
-        ➕
-💙 ${name2}
-━━━━━━━━━━━━━━━━━━━━━━
-💕 ভালোবাসা: ${p}%
-${hearts}
+            const msg = `Love Calculator
+------------------------------
+${name1}  +  ${name2}
+------------------------------
+Love: ${p}%
 
-${p >= 90 ? "🔥 পারফেক্ট কাপল!" : p >= 75 ? "💕 দারুণ জুটি!" : "💖 ভালো জুটি!"}`;
+${p >= 90 ? "Perfect Couple" : p >= 75 ? "Great Pair" : "Good Pair"}`;
             await sendWithGif(api, event, msg, 'ship');
         } catch (e) {
-            api.sendMessage("❌ শিপ হয়নি।", event.threadID);
+            api.sendMessage("Ship failed.", event.threadID);
         }
     },
 
     truth: (api, event) => {
-        const t = ["তোমার সবচেয়ে বড় ভয় কী?", "তুমি কাকে ভালোবাসো?", "তোমার লুকানো প্রতিভা কী?", "তুমি কখনো মিথ্যা বলেছো?"];
-        api.sendMessage(`❓ Truth: ${t[Math.floor(Math.random() * t.length)]}`, event.threadID);
+        const t = ["What is your biggest fear?", "Who do you love most?", "What is your hidden talent?", "Have you ever lied?"];
+        api.sendMessage(`Truth: ${t[Math.floor(Math.random() * t.length)]}`, event.threadID);
     },
 
     dare: (api, event) => {
-        const d = ["তোমার ক্রাশের নাম বলো", "একটি মজার ভিডিও পাঠাও", "তোমার শেষ ছবি পাঠাও", "একটি গান গাও"];
-        api.sendMessage(`🔥 Dare: ${d[Math.floor(Math.random() * d.length)]}`, event.threadID);
+        const d = ["Say your crush's name", "Send a funny video", "Send your last photo", "Sing a song"];
+        api.sendMessage(`Dare: ${d[Math.floor(Math.random() * d.length)]}`, event.threadID);
     },
 
     roast: (api, event) => {
-        const r = ["তুমি এত স্মার্ট যে গুগল তোমাকে সার্চ করে!", "তোমার মাথায় চুলের চেয়ে ভুল বেশি!", "তুমি এত ধীর যে কচ্ছপও ওভারটেক করে!"];
-        api.sendMessage(`🔥 Roast: ${r[Math.floor(Math.random() * r.length)]}`, event.threadID);
+        const r = ["You are so smart that Google searches you!", "You have more mistakes than hair on your head!", "You are so slow that even turtles overtake you!"];
+        api.sendMessage(`Roast: ${r[Math.floor(Math.random() * r.length)]}`, event.threadID);
     },
 
     top: (api, event) => {
         const db = getDB();
         const u = Object.entries(db.users).sort((a, b) => (b[1].coins || 0) - (a[1].coins || 0)).slice(0, 5);
-        let msg = "🏆 Top Members:\n";
-        u.forEach((x, i) => { msg += `${i + 1}. ${x[0]}: ${x[1].coins} কয়েন\n`; });
-        api.sendMessage(msg || "❌ ডেটা নেই।", event.threadID);
+        let msg = "Top Members:\n------------------------------\n";
+        u.forEach((x, i) => { msg += `${i + 1}. ${x[0]}: ${x[1].coins} coins\n`; });
+        api.sendMessage(msg || "No data.", event.threadID);
     },
 
-    // ==================== 🖼️ Utility ====================
     ghost: (api, event) => {
-        api.sendMessage("👻 ২৪ ঘণ্টার জন্য ঘোস্ট মোড!", event.threadID);
-    },
-
-    autonick: async (api, event, args, config) => {
-        const perm = await checkPermission(api, event, config, 1);
-        if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-        api.sendMessage(`✅ Auto Nick সেট: ${args.join(" ")}`, event.threadID);
+        api.sendMessage("Ghost mode activated for 24 hours.", event.threadID);
     },
 
     vid: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 1);
         if (!perm.allowed) return sendPermissionDenied(api, event, 1);
-        if (!args[0]) return api.sendMessage("❌ ব্যবহার: /vid [link]", event.threadID);
-        api.sendMessage("📥 ভিডিও ডাউনলোড হচ্ছে...", event.threadID);
+        if (!args[0]) return api.sendMessage("Usage: /vid [link]", event.threadID);
+        api.sendMessage("Downloading video...", event.threadID);
     },
 
-    // ==================== 🛡️ Bot Admin ====================
+    // ==================== Bot Admin ====================
     status: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 2);
         if (!perm.allowed) return sendPermissionDenied(api, event, 2);
         const up = process.uptime();
         const h = Math.floor(up / 3600), m = Math.floor((up % 3600) / 60), s = Math.floor(up % 60);
-        const msg = `╔══════════════════════════════╗
-      💀 DEAD DESTROYER 💀
-         System Status
-╚══════════════════════════════╝
-🟢 ONLINE ✅
-⏱️ Uptime: ${h}ঘ ${m}মি ${s}সে
-🤖 ${config.botName}
-📦 কমান্ড: 42+
-👑 Owner: ${config.owner}
-🛠️ Dev: ${config.developer}
-🛡️ Bot Admins: ${config.botAdmins?.length || 0} জন`;
+        const msg = `System Status
+------------------------------
+Status: ONLINE
+Uptime: ${h}h ${m}m ${s}s
+Name: ${config.botName}
+Owner: ${config.owner}
+Developer: ${config.developer}
+Bot Admins: ${config.botAdmins?.length || 0}`;
         api.sendMessage(msg, event.threadID);
     },
 
     botadmins: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 2);
         if (!perm.allowed) return sendPermissionDenied(api, event, 2);
-        let msg = "🛡️ বট অ্যাডমিন লিস্ট:\n━━━━━━━━━━━━━━━━━\n";
+        let msg = "Bot Admins:\n------------------------------\n";
         if (!config.botAdmins || config.botAdmins.length === 0) {
-            msg += "❌ কোনো বট অ্যাডমিন নেই।";
+            msg += "No bot admins.";
         } else {
             for (const id of config.botAdmins) {
                 const info = await new Promise(r => api.getUserInfo(id, (e, ret) => r(e ? { name: "Unknown" } : ret[id])));
-                msg += `🛡️ ${info.name}\n🆔 ${id}\n`;
+                msg += `${info.name}\nID: ${id}\n`;
             }
         }
         api.sendMessage(msg, event.threadID);
@@ -678,41 +748,39 @@ ${p >= 90 ? "🔥 পারফেক্ট কাপল!" : p >= 75 ? "💕 দ�
         if (!db.settings) db.settings = {};
         db.settings.maintenance = !db.settings.maintenance;
         saveDB(db);
-        api.sendMessage(`🔧 Maintenance Mode: ${db.settings.maintenance ? "ON ⚠️" : "OFF ✅"}`, event.threadID);
+        api.sendMessage(`Maintenance Mode: ${db.settings.maintenance ? "ON" : "OFF"}`, event.threadID);
     },
 
-    // ==================== 👑 Owner ====================
+    // ==================== Owner ====================
     addadmin: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 3);
         if (!perm.allowed) return sendPermissionDenied(api, event, 3);
         const target = Object.keys(event.mentions || {})[0];
-        if (!target) return api.sendMessage("❌ ব্যবহার: /addadmin @user", event.threadID);
-
+        if (!target) return api.sendMessage("Usage: /addadmin @user", event.threadID);
         const newConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
         if (!newConfig.botAdmins) newConfig.botAdmins = [];
-        if (newConfig.botAdmins.includes(target)) return api.sendMessage("⚠️ ইতিমধ্যেই বট অ্যাডমিন।", event.threadID);
+        if (newConfig.botAdmins.includes(target)) return api.sendMessage("Already a bot admin.", event.threadID);
         newConfig.botAdmins.push(target);
         fs.writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
-        api.sendMessage(`✅ ইউজারকে বট অ্যাডমিন করা হয়েছে!\n⚠️ বট রিস্টার্ট করুন।`, event.threadID);
+        api.sendMessage("User added as bot admin. Restart bot to apply.", event.threadID);
     },
 
     removeadmin: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 3);
         if (!perm.allowed) return sendPermissionDenied(api, event, 3);
         const target = Object.keys(event.mentions || {})[0];
-        if (!target) return api.sendMessage("❌ ব্যবহার: /removeadmin @user", event.threadID);
-
+        if (!target) return api.sendMessage("Usage: /removeadmin @user", event.threadID);
         const newConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
         if (!newConfig.botAdmins) newConfig.botAdmins = [];
         newConfig.botAdmins = newConfig.botAdmins.filter(id => id !== target);
         fs.writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
-        api.sendMessage(`✅ ইউজারকে সরানো হয়েছে!`, event.threadID);
+        api.sendMessage("User removed from bot admins.", event.threadID);
     },
 
     restart: async (api, event, args, config) => {
         const perm = await checkPermission(api, event, config, 3);
         if (!perm.allowed) return sendPermissionDenied(api, event, 3);
-        api.sendMessage("🔄 বট রিস্টার্ট হচ্ছে...", event.threadID, () => process.exit(0));
+        api.sendMessage("Bot is restarting...", event.threadID, () => process.exit(0));
     }
 
 };
