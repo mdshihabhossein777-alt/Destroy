@@ -51,11 +51,10 @@ const lastMsg = {};
 login({ appState }, (err, api) => {
     if (err) return console.error("Login failed:", err);
 
-    api.setOptions({
-        listenEvents: true,
-        selfListen: false
-    });
-
+ api.setOptions({
+    listenEvents: true,
+    selfListen: true
+});
     console.log(`${config.botName} is online`);
 
     api.listenMqtt(async (err, event) => {
