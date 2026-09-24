@@ -1,0 +1,17 @@
+{
+  "name": "ghostx-bot",
+  "version": "1.0.0",
+  "description": "GhostX Facebook Messenger Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "GhostX",
+  "license": "ISC",
+  "dependencies": {
+    "@dongdev/fca-unofficial": "^4.0.3",
+    "axios": "^1.20.0",
+    "fca-unofficial": "^1.3.10",
+    "ws3-fca": "^1.0.0"
+  }
+}
