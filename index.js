@@ -43,7 +43,6 @@ loadCommands('./commands');
 loadCommands('./security');
 console.log(`📦 Total ${Object.keys(commands).length} commands loaded`);
 
-// ==================== Trackers ====================
 const lastMsg = {};
 const joinTracker = {};
 
@@ -65,10 +64,10 @@ login({ appState }, (err, api) => {
             const configGroups = config.notifyGroups || [];
             const allGroups = [...new Set([...dbGroups, ...configGroups])];
 
-            console.log(`📋 Groups to notify: ${allGroups.length}`);
+            console.log(`📋 Groups to notify: ${allGroups.length} (DB: ${dbGroups.length}, Config: ${configGroups.length})`);
 
             if (allGroups.length === 0) {
-                console.log("⚠️ No groups yet. Auto-track on message.");
+                console.log("⚠️ No groups found yet. Waiting for messages to track.");
                 return;
             }
 
@@ -86,16 +85,11 @@ login({ appState }, (err, api) => {
 
 📌 ᴘʀᴇᴠɪᴏᴜꜱ: ${config.previousVersion || "V1.0"}
 🚀 ᴄᴜʀʀᴇɴᴛ : ${currentVersion}
-━━━━━━━━━━━━━━━━━━━━━━━━
 
-✨ ɴᴇᴡ ꜰᴇᴀᴛᴜʀᴇꜱ ᴀᴅᴅᴇᴅ
-
+🛡️ /security on ᴛᴏ ᴇɴᴀʙʟᴇ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ
 📖 /help ꜰᴏʀ ᴄᴏᴍᴍᴀɴᴅꜱ
-💬 "bot active" ᴛᴏ ᴛᴇꜱᴛ
-🛡️ /security on ꜰᴏʀ ꜰᴜʟʟ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-💀 ${config.botName}
 👨‍💻 ᴅᴇᴠ: ${config.developer}
 ━━━━━━━━━━━━━━━━━━━━━━━━${timeFooter()}`;
 
@@ -111,7 +105,7 @@ login({ appState }, (err, api) => {
             db.settings.lastNotifiedVersion = currentVersion;
             db.settings.lastNotifiedAt = Date.now();
             saveDB(db);
-            console.log(`🔔 Notified: ${sent} sent, ${failed} failed`);
+            console.log(`🔔 Notified: ${sent}/${allGroups.length}`);
         } catch (e) { console.error("Notify error:", e.message); }
     }, 15000);
 
@@ -124,7 +118,7 @@ login({ appState }, (err, api) => {
             const db = getDB();
             const tid = event.threadID;
 
-            // AUTO GROUP TRACKING
+            // ==================== 📊 AUTO GROUP TRACKING ====================
             if (tid && event.isGroup) {
                 if (!db.groups) db.groups = {};
                 if (!db.groups[tid]) {
@@ -134,7 +128,9 @@ login({ appState }, (err, api) => {
                         name: event.threadName || "Unknown"
                     };
                     saveDB(db);
-                    console.log(`📊 Group tracked: ${tid}`);
+                    console.log(`📊 NEW Group: ${tid}`);
+                    
+                    // config.json-এ সেভ
                     try {
                         const newConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
                         if (!newConfig.notifyGroups) newConfig.notifyGroups = [];
@@ -144,7 +140,8 @@ login({ appState }, (err, api) => {
                         }
                     } catch (e) {}
                 } else {
-                    if (event.threadName && !db.groups[tid].lockName) {
+                    // লক না থাকলে নাম আপডেট
+                    if (event.threadName && !db.groups[tid].lockName && event.threadName !== "Unknown") {
                         db.groups[tid].name = event.threadName;
                     }
                     db.groups[tid].lastSeen = Date.now();
@@ -152,7 +149,7 @@ login({ appState }, (err, api) => {
                 }
             }
 
-            // USER ACTIVITY
+            // ==================== 👤 USER ACTIVITY ====================
             if (event.senderID && event.type === "message") {
                 if (!db.users) db.users = {};
                 if (!db.users[event.senderID]) db.users[event.senderID] = { points: 0, lastActive: 0 };
@@ -161,7 +158,6 @@ login({ appState }, (err, api) => {
                 saveDB(db);
             }
 
-            // BOT OFF CHECK
             if (tid && db.security?.[tid]?.botOff && event.senderID !== config.owner) return;
 
             const sec = db.security?.[tid] || {};
@@ -172,20 +168,44 @@ login({ appState }, (err, api) => {
             const isGroupAdmin = senderRole === "groupadmin";
             const isAdmin = isOwner || isBotAdmin || isGroupAdmin;
 
-            // LOCK NAME
+            // ==================== 🔒 LOCK NAME (FIXED) ====================
             if (event.logMessageType === "log:thread-name" && grp.lockName) {
+                console.log(`🔒 Name change detected`);
+                
                 if (!isOwner && !isBotAdmin) {
-                    let savedName = db.groups[tid]?.lockedName || db.groups[tid]?.name;
-                    if (savedName) {
+                    // সেভ করা নাম বের করুন
+                    let savedName = db.groups[tid]?.lockedName;
+                    
+                    // যদি "Unknown" বা খালি থাকে, বর্তমান নাম থেকে সেট করুন
+                    if (!savedName || savedName === "Unknown" || savedName.trim() === "") {
                         try {
-                            await new Promise(r => api.setTitle(savedName, tid, () => r()));
-                            api.sendMessage(`🔒 ɢʀᴏᴜᴘ ɴᴀᴍᴇ ɪꜱ ʟᴏᴄᴋᴇᴅ!\n📌 ʀᴇꜱᴛᴏʀᴇᴅ: ${savedName}${timeFooter()}`, tid);
+                            const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
+                            if (info?.threadName && info.threadName !== "Unknown") {
+                                savedName = info.threadName;
+                                db.groups[tid].lockedName = savedName;
+                                saveDB(db);
+                            }
                         } catch (e) {}
                     }
+
+                    if (savedName && savedName !== "Unknown") {
+                        try {
+                            await new Promise(r => api.setTitle(savedName, tid, () => r()));
+                            api.sendMessage(
+                                `🔒 ɢʀᴏᴜᴘ ɴᴀᴍᴇ ɪꜱ ʟᴏᴄᴋᴇᴅ!
+━━━━━━━━━━━━━━━━━━━━━━━━
+📌 ʀᴇꜱᴛᴏʀᴇᴅ: ${savedName}${timeFooter()}`,
+                                tid
+                            );
+                        } catch (e) {
+                            console.error("Restore failed:", e.message);
+                        }
+                    }
                 } else {
+                    // অ্যাডমিন পরিবর্তন করলে সেভ
                     try {
                         const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
-                        if (info?.threadName) {
+                        if (info?.threadName && info.threadName !== "Unknown") {
                             db.groups[tid].lockedName = info.threadName;
                             db.groups[tid].name = info.threadName;
                             saveDB(db);
@@ -194,25 +214,23 @@ login({ appState }, (err, api) => {
                 }
             }
 
-            // LOCK PHOTO
-            if (event.logMessageType === "log:thread-icon" && grp.lockPhoto) {
-                if (!isAdmin) api.sendMessage(`🔒 ɢʀᴏᴜᴘ ᴘʜᴏᴛᴏ ɪꜱ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
+            // ==================== 🔒 LOCK PHOTO ====================
+            if (event.logMessageType === "log:thread-icon" && grp.lockPhoto && !isAdmin) {
+                api.sendMessage(`🔒 ᴘʜᴏᴛᴏ ɪꜱ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
             }
 
-            // LOCK NICK
-            if (event.logMessageType === "log:user-nickname" && grp.lockNick) {
-                if (!isAdmin) {
-                    const target = event.logMessageData?.participant_id;
-                    if (target) {
-                        try {
-                            await new Promise(r => api.changeNickname("", tid, target, () => r()));
-                            api.sendMessage(`🔒 ɴɪᴄᴋɴᴀᴍᴇ ɪꜱ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
-                        } catch (e) {}
-                    }
+            // ==================== 🔒 LOCK NICK ====================
+            if (event.logMessageType === "log:user-nickname" && grp.lockNick && !isAdmin) {
+                const target = event.logMessageData?.participant_id;
+                if (target) {
+                    try {
+                        await new Promise(r => api.changeNickname("", tid, target, () => r()));
+                        api.sendMessage(`🔒 ɴɪᴄᴋɴᴀᴍᴇ ɪꜱ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
+                    } catch (e) {}
                 }
             }
 
-            // ANTI-RAID
+            // ==================== 🛡️ ANTI-RAID ====================
             if (event.logMessageType === "log:subscribe" && sec.antiRaid) {
                 if (!joinTracker[tid]) joinTracker[tid] = [];
                 const now = Date.now();
@@ -222,18 +240,18 @@ login({ appState }, (err, api) => {
                     db.groups[tid] = db.groups[tid] || {};
                     db.groups[tid].lockAll = true;
                     saveDB(db);
-                    api.sendMessage(`🚨 ᴀɴᴛɪ-ʀᴀɪᴅ ᴛʀɪɢɢᴇʀᴇᴅ!\n🔒 ɢʀᴏᴜᴘ ʟᴏᴄᴋᴇᴅ${timeFooter()}`, tid);
+                    api.sendMessage(`🚨 ᴀɴᴛɪ-ʀᴀɪᴅ!${timeFooter()}`, tid);
                 }
             }
 
-            // WELCOME
+            // ==================== 🎉 WELCOME ====================
             if (event.logMessageType === "log:subscribe") {
                 const added = event.logMessageData?.addedParticipants || [];
                 const botID = api.getCurrentUserID();
                 const isBot = added.some(p => p.userFbId === botID);
 
                 if (isBot) {
-                    api.sendMessage(`👻 ᴛʜᴀɴᴋꜱ ꜰᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ!\n💀 ${config.botName}\n✅ ᴛʏᴘᴇ "bot active"${timeFooter()}`, tid);
+                    api.sendMessage(`👻 ᴛʜᴀɴᴋꜱ!\n💀 ${config.botName}\n✅ "bot active"${timeFooter()}`, tid);
                 } else {
                     try {
                         const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
@@ -241,14 +259,14 @@ login({ appState }, (err, api) => {
                         const mcount = info?.participantIDs?.length || 0;
                         for (const p of added) {
                             const name = p.fullName || "New Member";
-                            const welcomeText = db.groups[tid]?.welcome || `🌸 ᴡᴇʟᴄᴏᴍᴇ ${name}!\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌹 ᴛᴏ ᴏᴜʀ ꜰᴀᴍɪʟʏ!\n👥 ᴍᴇᴍʙᴇʀꜱ: ${mcount}\n📌 ɢʀᴏᴜᴘ: ${gname}`;
-                            await sendWithGif(api, event, welcomeText + timeFooter(), 'wave', [{ tag: name, id: p.userFbId }]);
+                            const wm = `🌸 ᴡᴇʟᴄᴏᴍᴇ ${name}!\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌹 ᴛᴏ ᴏᴜʀ ꜰᴀᴍɪʟʏ!\n👥 ᴍᴇᴍʙᴇʀꜱ: ${mcount}\n📌 ɢʀᴏᴜᴘ: ${gname}`;
+                            await sendWithGif(api, event, wm + timeFooter(), 'wave', [{ tag: name, id: p.userFbId }]);
                         }
                     } catch (e) {}
                 }
             }
 
-            // LEFT
+            // ==================== 👋 LEFT ====================
             if (event.logMessageType === "log:unsubscribe") {
                 const lid = event.logMessageData?.leftParticipantFbId;
                 if (lid && lid !== api.getCurrentUserID()) {
@@ -260,7 +278,7 @@ login({ appState }, (err, api) => {
                             const name = ret[lid]?.name || "A member";
                             const mcount = info?.participantIDs?.length || 0;
                             const msg = kicked
-                                ? `👢 ${name} ᴡᴀꜱ ᴋɪᴄᴋᴇᴅ\n👥 ʀᴇᴍᴀɪɴɪɴɢ: ${mcount}`
+                                ? `👢 ${name} ᴋɪᴄᴋᴇᴅ\n👥 ʀᴇᴍᴀɪɴɪɴɢ: ${mcount}`
                                 : `🍂 ɢᴏᴏᴅʙʏᴇ ${name}\n👥 ʀᴇᴍᴀɪɴɪɴɢ: ${mcount}`;
                             await sendWithGif(api, event, msg + timeFooter(), 'wave');
                         });
@@ -268,16 +286,18 @@ login({ appState }, (err, api) => {
                 }
             }
 
-            // MESSAGE PROCESSING
+            // ==================== 💬 MESSAGES ====================
             if (event.type === "message" && event.body) {
                 const msg = event.body.trim();
 
+                // AFK
                 if (db.afk?.[event.senderID]) {
                     delete db.afk[event.senderID];
                     saveDB(db);
                     api.sendMessage(`✅ ᴡᴇʟᴄᴏᴍᴇ ʙᴀᴄᴋ!${timeFooter()}`, tid);
                 }
 
+                // Protections (Owner + Bot Admin bypass)
                 if (!isOwner && !isBotAdmin) {
                     if (grp.antiLink && /(https?:\/\/|www\.|\.com|\.net)/gi.test(event.body) && !isAdmin) {
                         api.unsendMessage(event.messageID);
@@ -286,7 +306,7 @@ login({ appState }, (err, api) => {
                     }
                     if (grp.antiGali && /(madarchod|bhenchod|fuck|shit|bastard|harami)/gi.test(event.body) && !isAdmin) {
                         api.unsendMessage(event.messageID);
-                        api.sendMessage(`🤬 ʙᴀᴅ ᴡᴏʀᴅꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
+                        api.sendMessage(`🤬 ʙᴀᴅ ᴡᴏʀᴅꜱ!${timeFooter()}`, tid);
                         return;
                     }
                     if (grp.antiPhone && /(\+?880|01[3-9])\d{8,9}/g.test(event.body) && !isAdmin) {
@@ -296,15 +316,16 @@ login({ appState }, (err, api) => {
                     }
                 }
 
-                if (event.attachments && event.attachments.length > 0 && !isOwner && !isBotAdmin) {
+                // Anti-sticker/gif
+                if (event.attachments && event.attachments.length > 0 && !isOwner && !isBotAdmin && !isAdmin) {
                     for (const att of event.attachments) {
-                        if (grp.antiSticker && att.type === "sticker" && !isAdmin) {
+                        if (grp.antiSticker && att.type === "sticker") {
                             api.unsendMessage(event.messageID);
-                            api.sendMessage(`🎨 ꜱᴛɪᴄᴋᴇʀꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
+                            api.sendMessage(`🎨 ꜱᴛɪᴄᴋᴇʀꜱ!${timeFooter()}`, tid);
                         }
-                        if (grp.antiGif && att.type === "animated_image" && !isAdmin) {
+                        if (grp.antiGif && att.type === "animated_image") {
                             api.unsendMessage(event.messageID);
-                            api.sendMessage(`🎬 ɢɪꜰꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
+                            api.sendMessage(`🎬 ɢɪꜰꜱ!${timeFooter()}`, tid);
                         }
                     }
                 }
@@ -333,10 +354,10 @@ login({ appState }, (err, api) => {
                     return api.sendMessage(`💀 ${config.botName} ɪꜱ ᴀᴄᴛɪᴠᴇ ✅\n🛡️ ꜱᴇᴄᴜʀɪᴛʏ: ${secCount} ᴀᴄᴛɪᴠᴇ${timeFooter()}`, tid);
                 }
 
+                // Command
                 if (msg.startsWith(config.prefix)) {
                     const args = msg.slice(config.prefix.length).split(' ');
                     const cmd = args.shift().toLowerCase();
-
                     if (commands[cmd]) {
                         console.log(`✅ Command: ${cmd}`);
                         api.sendTypingIndicator(tid, () => {});
@@ -365,10 +386,8 @@ setInterval(async () => {
         if (!global.globalBotApi) return;
         const db = getDB();
         if (!db.security) return;
-
         const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
         const now = Date.now();
-
         for (const tid in db.security) {
             if (!db.security[tid].autoKick) continue;
             global.globalBotApi.getThreadInfo(tid, async (err, info) => {
@@ -403,6 +422,6 @@ setInterval(async () => {
     try { await axios.get(RENDER_URL); } catch (e) {}
 }, 4 * 60 * 1000);
 
-// ==================== 🛡️ ERROR HANDLERS ====================
+// ==================== 🛡️ ERRORS ====================
 process.on('uncaughtException', (err) => console.error("Uncaught:", err.message));
 process.on('unhandledRejection', (err) => console.error("Unhandled:", err));
