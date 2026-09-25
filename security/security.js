@@ -1,5 +1,5 @@
+const fs = require('fs');
 const { getDB, saveDB, timeFooter, hasPermission, permissionDenied } = require('../utils');
-
 module.exports = {
 
     // ==================== ANTI-BOT (1) ====================
@@ -181,19 +181,65 @@ module.exports = {
     },
 
     // ==================== ADD-ADMIN (16) ====================
+        // ==================== ADD-ADMIN ====================
     addadmin: async (api, event, args, config) => {
         if (event.senderID !== config.owner) return permissionDenied(api, event, "owner");
+        
         const t = Object.keys(event.mentions || {})[0];
         if (!t) return api.sendMessage("ᴜꜱᴀɢᴇ: /addadmin @ᴜꜱᴇʀ" + timeFooter(), event.threadID);
-        const newConfig = JSON.parse(require('fs').readFileSync('./config.json', 'utf8'));
-        if (!newConfig.botAdmins) newConfig.botAdmins = [];
-        if (newConfig.botAdmins.includes(t)) return api.sendMessage("ᴀʟʀᴇᴀᴅʏ ᴀᴅᴍɪɴ" + timeFooter(), event.threadID);
-        newConfig.botAdmins.push(t);
-        require('fs').writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
-        const name = event.mentions[t].replace('@', '');
-        api.sendMessage(`✅ ${name} ɪꜱ ɴᴏᴡ ʙᴏᴛ ᴀᴅᴍɪɴ${timeFooter()}`, event.threadID);
+        
+        try {
+            const configPath = './config.json';
+            const newConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            if (!newConfig.botAdmins) newConfig.botAdmins = [];
+            
+            if (newConfig.botAdmins.includes(t)) {
+                return api.sendMessage("⚠️ ᴀʟʀᴇᴀᴅʏ ʙᴏᴛ ᴀᴅᴍɪɴ" + timeFooter(), event.threadID);
+            }
+            
+            newConfig.botAdmins.push(t);
+            fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
+            
+            // ✅ রানটাইমে config আপডেট করুন (রিস্টার্ট ছাড়াই কাজ করবে)
+            if (!config.botAdmins) config.botAdmins = [];
+            config.botAdmins.push(t);
+            
+            const name = event.mentions[t].replace('@', '');
+            api.sendMessage(`✅ ${name} ɪꜱ ɴᴏᴡ ʙᴏᴛ ᴀᴅᴍɪɴ!\n🆔 ${t}${timeFooter()}`, event.threadID);
+            console.log(`✅ New bot admin added: ${t} (${name})`);
+        } catch (e) {
+            console.error("Add admin error:", e.message);
+            api.sendMessage("❌ ꜰᴀɪʟᴇᴅ: " + e.message + timeFooter(), event.threadID);
+        }
     },
 
+    // ==================== REMOVE-ADMIN ====================
+    removeadmin: async (api, event, args, config) => {
+        if (event.senderID !== config.owner) return permissionDenied(api, event, "owner");
+        
+        const t = Object.keys(event.mentions || {})[0] || args[0];
+        if (!t) return api.sendMessage("ᴜꜱᴀɢᴇ: /removeadmin @ᴜꜱᴇʀ" + timeFooter(), event.threadID);
+        
+        try {
+            const configPath = './config.json';
+            const newConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            if (!newConfig.botAdmins) newConfig.botAdmins = [];
+            
+            newConfig.botAdmins = newConfig.botAdmins.filter(id => id !== t);
+            fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
+            
+            // ✅ রানটাইমে config আপডেট করুন
+            if (config.botAdmins) {
+                config.botAdmins = config.botAdmins.filter(id => id !== t);
+            }
+            
+            api.sendMessage(`✅ ʙᴏᴛ ᴀᴅᴍɪɴ ʀᴇᴍᴏᴠᴇᴅ!\n🆔 ${t}${timeFooter()}`, event.threadID);
+            console.log(`✅ Bot admin removed: ${t}`);
+        } catch (e) {
+            console.error("Remove admin error:", e.message);
+            api.sendMessage("❌ ꜰᴀɪʟᴇᴅ: " + e.message + timeFooter(), event.threadID);
+        }
+    },
     // ==================== REMOVE-ADMIN (17) ====================
     removeadmin: async (api, event, args, config) => {
         if (event.senderID !== config.owner) return permissionDenied(api, event, "owner");
