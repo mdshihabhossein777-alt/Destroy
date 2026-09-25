@@ -4,6 +4,7 @@ const axios = require('axios');
 const http = require('http');
 const login = require('@dongdev/fca-unofficial');
 const config = require('./config.json');
+const { getDB, saveDB, timeFooter, sendWithGif, guessGender, getUserRole } = require('./utils');
 
 // ==================== AppState Load ====================
 let appState;
@@ -22,18 +23,26 @@ try {
 
 // ==================== Commands Loader ====================
 const commands = {};
-try {
-    const files = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
-    for (const file of files) {
-        const mod = require(path.join(__dirname, 'commands', file));
-        for (const name in mod) commands[name] = mod[name];
+
+function loadCommands(dir) {
+    try {
+        const files = fs.readdirSync(dir).filter(f => f.endsWith('.js'));
+        for (const file of files) {
+            const mod = require(path.join(__dirname, dir, file));
+            for (const name in mod) commands[name] = mod[name];
+        }
+    } catch (e) {
+        console.error(`Load failed from ${dir}:`, e.message);
     }
-    console.log(`Total ${Object.keys(commands).length} commands loaded`);
+}
+
+try {
+    loadCommands('./commands');   // পুরনো all.js + নতুন public.js, admin.js
+    loadCommands('./security');   // নতুন security.js, master.js
+    console.log(`📦 Total ${Object.keys(commands).length} commands loaded`);
 } catch (e) {
     console.error("Commands load failed:", e.message);
 }
-
-const lastMsg = {};
 
 // ==================== Login ====================
 login({ appState }, (err, api) => {
@@ -48,10 +57,131 @@ login({ appState }, (err, api) => {
 
     console.log(`${config.botName} is online`);
 
+
+    // ==================== 🔔 Version Update Notification ====================
+    setTimeout(async () => {
+        try {
+            const db = getDB();
+            if (!db.settings) db.settings = {};
+            if (!db.groups) db.groups = {};
+
+            // যদি ইতিমধ্যে এই ভার্সনের নোটিফিকেশন পাঠানো হয়ে থাকে
+            if (db.settings.lastNotifiedVersion === config.version) {
+                console.log(`✅ Version ${config.version} already notified`);
+                return;
+            }
+
+            const groupIDs = Object.keys(db.groups);
+            if (groupIDs.length === 0) {
+                console.log("⚠️ No groups found in database to notify");
+                db.settings.lastNotifiedVersion = config.version;
+                db.settings.lastNotifiedAt = Date.now();
+                saveDB(db);
+                return;
+            }
+
+            const updateMsg = `🔔 ʙᴏᴛ ᴜᴘᴅᴀᴛᴇ ɴᴏᴛɪꜰɪᴄᴀᴛɪᴏɴ
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 ${config.botName}
+━━━━━━━━━━━━━━━━━━━━━━━━
+🆙 ᴠᴇʀꜱɪᴏɴ ᴜᴘᴅᴀᴛᴇ!
+
+📌 ᴘʀᴇᴠɪᴏᴜꜱ: ${config.previousVersion || "V1.0"}
+🚀 ᴄᴜʀʀᴇɴᴛ : ${config.version}
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ ᴡʜᴀᴛ'ꜱ ɴᴇᴡ ɪɴ ${config.version}:
+🔹 92 ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅꜱ
+🔹 ɴᴇᴡ ᴘᴀɢᴇ ꜱʏꜱᴛᴇᴍ (/page1-4)
+🔹 ʙʀᴜᴛᴀʟ ꜱᴇᴄᴜʀɪᴛʏ ꜱʏꜱᴛᴇᴍ
+🔹 ᴍᴀꜱᴛᴇʀ ᴄᴏɴᴛʀᴏʟ (/security, /war)
+🔹 ɪᴍᴘʀᴏᴠᴇᴅ ᴘᴇʀꜰᴏʀᴍᴀɴᴄᴇ
+🔹 ᴀɴᴛɪ-ʀᴀɪᴅ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ
+
+📖 ᴛʏᴘᴇ /help ᴛᴏ ꜱᴇᴇ ᴄᴏᴍᴍᴀɴᴅꜱ
+💬 ᴛʏᴘᴇ "bot active" ᴛᴏ ᴛᴇꜱᴛ ʙᴏᴛ
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 ${config.botName}
+👨‍💻 ᴅᴇᴠ: ${config.developer}
+━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+            let sent = 0;
+            let failed = 0;
+
+            for (const gid of groupIDs) {
+                try {
+                    await new Promise((resolve) => {
+                        api.sendMessage(updateMsg, gid, (err) => {
+                            if (err) {
+                                console.error(`❌ Failed to notify ${gid}:`, err.message);
+                                failed++;
+                            } else {
+                                console.log(`✅ Notified group: ${gid}`);
+                                sent++;
+                            }
+                            resolve();
+                        });
+                    });
+                    // প্রতি গ্রুপে ২ সেকেন্ড বিরতি (Facebook স্প্যাম ব্লক এড়াতে)
+                    await new Promise(r => setTimeout(r, 2000));
+                } catch (e) {
+                    failed++;
+                }
+            }
+
+            // আপডেট শেষে সেভ
+            db.settings.lastNotifiedVersion = config.version;
+            db.settings.lastNotifiedAt = Date.now();
+            saveDB(db);
+
+            console.log(`🔔 Update Notification: ${sent} sent, ${failed} failed`);
+
+            // Owner কে রিপোর্ট পাঠানো
+            try {
+                api.sendMessage(
+                    `✅ ᴠᴇʀꜱɪᴏɴ ᴜᴘᴅᴀᴛᴇ ɴᴏᴛɪꜰɪᴄᴀᴛɪᴏɴ ꜱᴇɴᴛ
+━━━━━━━━━━━━━━━━━━━━━━━━
+📦 ᴠᴇʀꜱɪᴏɴ: ${config.version}
+✅ ꜱᴇɴᴛ: ${sent}
+❌ ꜰᴀɪʟᴇᴅ: ${failed}
+📊 ᴛᴏᴛᴀʟ ɢʀᴏᴜᴘꜱ: ${groupIDs.length}${timeFooter()}`,
+                    config.owner
+                );
+            } catch (e) {}
+
+        } catch (err) {
+            console.error("Version notify error:", err.message);
+        }
+    }, 10000); // ১০ সেকেন্ড পর (বট স্টার্ট আপ শেষ হলে)
+
+
+
+
+
     api.listenMqtt(async (err, event) => {
         if (err) return console.error(err);
 
         // ==================== ACTIVITY TRACKER ====================
+
+                // গ্রুপ ট্র্যাকিং (যাতে নোটিফিকেশন পাঠানো যায়)
+                if (event.isGroup && event.threadID) {
+                    try {
+                        const db = getDB();
+                        if (!db.groups) db.groups = {};
+                        if (!db.groups[event.threadID]) {
+                            db.groups[event.threadID] = {};
+                        }
+                        db.groups[event.threadID].lastSeen = Date.now();
+                        db.groups[event.threadID].name = event.threadName || db.groups[event.threadID].name || "Unknown";
+                        saveDB(db);
+                    } catch (e) {}
+                }
+
+
+
+
+
         if (event.type === "message" && event.senderID && event.threadID) {
             try {
                 const dbPath = './database.json';

@@ -1,12 +1,13 @@
 {
-    "botName": "💀 DEAD DESTROYER 💀",
+    "botName": "DEAD DESTROYER",
     "prefix": "/",
     "owner": "61577562306224",
     "botAdmins": [
         "BOT_ADMIN_ID_1",
         "BOT_ADMIN_ID_2"
     ],
-    "version": "V1.0",
-    "developer": "SHIHAB"
+    "version": "V1.1",
+     "previousVersion": "V1.0",
+    "developer": "Ariyan Shihab"
 }
  

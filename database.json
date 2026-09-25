@@ -1,14 +1,13 @@
 {
     "groups": {},
     "users": {},
+    "roles": {},
     "warnings": {},
-    "banned": {},
-    "activity": {},
+    "blacklist": {},
+    "security": {},
+    "afk": {},
     "settings": {
-        "botLock": false,
-        "autoKick": false,
-        "darkMode": false,
-        "antiLink": false,
-        "maintenance": false
+        "lastNotifiedVersion": "V1.0",
+        "lastNotifiedAt": 0
     }
 }
