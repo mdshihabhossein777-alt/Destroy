@@ -351,12 +351,250 @@ ${dayNight}
     },
 
     // ==================== UPTIME ====================
-    uptime: async (api, event, args, config) => {
+        uptime: async (api, event, args, config) => {
         const health = healthCheck();
         api.sendMessage(
             `⏱️ ᴜᴘᴛɪᴍᴇ: ${health.uptimeHuman}\n🕐 ᴛɪᴍᴇ: ${health.time}${timeFooter()}`,
             event.threadID
         );
-    }
+    },           // ← সঠিক: একটি `}` এবং একটি কমা
+
+    // ==================== 👑 UNLIMITED OWNER SYSTEM ====================
+
+    // Owner যোগ করা
+    addowner: async (api, event, args, config) => {
+        const { getOwnerList, timeFooter } = require('../utils');
+        const ownerList = getOwnerList(config);
+        
+        // ✅ শুধু Owner-ই নতুন Owner যোগ করতে পারবে
+        if (!ownerList.includes(event.senderID)) {
+            return api.sendMessage(`🚫 𝐎ᴡɴᴇʀ ᴏɴʟʏ ᴄᴏᴍᴍᴀɴᴅ${timeFooter()}`, event.threadID);
+        }
+
+        const target = Object.keys(event.mentions || {})[0] || args[0];
+        if (!target) return api.sendMessage(`ᴜꜱᴀɢᴇ: /addowner @ᴜꜱᴇʀ${timeFooter()}`, event.threadID);
+
+        if (ownerList.includes(target)) {
+            return api.sendMessage(`⚠️ ᴀʟʀᴇᴀᴅʏ ᴀɴ ᴏᴡɴᴇʀ${timeFooter()}`, event.threadID);
+        }
+
+        try {
+            const newConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+            if (!Array.isArray(newConfig.owner)) {
+                newConfig.owner = newConfig.owner.split(",").map(id => id.trim()).filter(id => id);
+            }
+            newConfig.owner.push(target);
+            fs.writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
+
+            // Runtime Update
+            if (!Array.isArray(config.owner)) {
+                config.owner = config.owner.split(",").map(id => id.trim()).filter(id => id);
+            }
+            config.owner.push(target);
+
+            const name = event.mentions[target] ? event.mentions[target].replace('@', '') : target;
+            api.sendMessage(
+                `👑 𝐍ᴇᴡ 𝐎ᴡɴᴇʀ ᴀᴅᴅᴇᴅ!
+━━━━━━━━━━━━━━━━━━━━━━━━
+👤 ${name}
+🆔 ${target}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ꜱʏꜱᴛᴇᴍ${timeFooter()}`,
+                event.threadID
+            );
+        } catch (e) {
+            api.sendMessage(`❌ ꜰᴀɪʟᴇᴅ: ${e.message}${timeFooter()}`, event.threadID);
+        }
+    },
+
+    // Owner সরানো
+    removeowner: async (api, event, args, config) => {
+        const { getOwnerList, timeFooter } = require('../utils');
+        const ownerList = getOwnerList(config);
+
+        // শুধু Owner সরাতে পারবে
+        if (!ownerList.includes(event.senderID)) {
+            return api.sendMessage(`🚫 𝐎ᴡɴᴇʀ ᴏɴʟʏ ᴄᴏᴍᴍᴀɴᴅ${timeFooter()}`, event.threadID);
+        }
+
+        const target = Object.keys(event.mentions || {})[0] || args[0];
+        if (!target) return api.sendMessage(`ᴜꜱᴀɢᴇ: /removeowner @ᴜꜱᴇʀ${timeFooter()}`, event.threadID);
+
+        // নিজেকে সরাতে পারবে না
+        if (target === event.senderID) {
+            return api.sendMessage(`⚠️ ʏᴏᴜ ᴄᴀɴ'ᴛ ʀᴇᴍᴏᴠᴇ ʏᴏᴜʀꜱᴇʟꜰ${timeFooter()}`, event.threadID);
+        }
+
+        if (!ownerList.includes(target)) {
+            return api.sendMessage(`⚠️ ᴜꜱᴇʀ ɪꜱ ɴᴏᴛ ᴀɴ ᴏᴡɴᴇʀ${timeFooter()}`, event.threadID);
+        }
+
+        try {
+            const newConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+            if (!Array.isArray(newConfig.owner)) {
+                newConfig.owner = newConfig.owner.split(",").map(id => id.trim()).filter(id => id);
+            }
+            newConfig.owner = newConfig.owner.filter(id => id !== target);
+            fs.writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
+
+            // Runtime Update
+            if (!Array.isArray(config.owner)) {
+                config.owner = config.owner.split(",").map(id => id.trim()).filter(id => id);
+            }
+            config.owner = config.owner.filter(id => id !== target);
+
+            const name = event.mentions[target] ? event.mentions[target].replace('@', '') : target;
+            api.sendMessage(
+                `👑 𝐎ᴡɴᴇʀ ʀᴇᴍᴏᴠᴇᴅ
+━━━━━━━━━━━━━━━━━━━━━━━━
+👤 ${name}
+🆔 ${target}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ꜱʏꜱᴛᴇᴍ${timeFooter()}`,
+                event.threadID
+            );
+        } catch (e) {
+            api.sendMessage(`❌ ꜰᴀɪʟᴇᴅ: ${e.message}${timeFooter()}`, event.threadID);
+        }
+    },
+
+    // সব Owner লিস্ট
+    ownerlist: async (api, event, args, config) => {
+        const { getOwnerList, timeFooter } = require('../utils');
+        const ownerList = getOwnerList(config);
+
+        let msg = `👑 𝐎ᴡɴᴇʀ 𝐋ɪꜱᴛ\n━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        msg += `📊 ᴛᴏᴛᴀʟ: ${ownerList.length}\n\n`;
+
+        for (let i = 0; i < ownerList.length; i++) {
+            const id = ownerList[i];
+            try {
+                const info = await new Promise(r => api.getUserInfo(id, (e, ret) => r(e ? null : ret[id])));
+                const name = info ? info.name : "Unknown";
+                msg += `${i + 1}. ${name}\n   🆔 ${id}\n`;
+            } catch (e) {
+                msg += `${i + 1}. 🆔 ${id}\n`;
+            }
+        }
+        msg += `━━━━━━━━━━━━━━━━━━━━━━━━\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ꜱʏꜱᴛᴇᴍ${timeFooter()}`;
+        api.sendMessage(msg, event.threadID);
+    },
+
+    // ==================== 👑 UNLIMITED ADMIN SYSTEM ====================
+
+    // Bot Admin যোগ
+    addadmin: async (api, event, args, config) => {
+        const { getOwnerList, getAdminList, timeFooter } = require('../utils');
+        const ownerList = getOwnerList(config);
+
+        // শুধু Owner-ই Admin যোগ করতে পারবে
+        if (!ownerList.includes(event.senderID)) {
+            return api.sendMessage(`🚫 𝐎ᴡɴᴇʀ ᴏɴʟʏ ᴄᴏᴍᴍᴀɴᴅ${timeFooter()}`, event.threadID);
+        }
+
+        const target = Object.keys(event.mentions || {})[0] || args[0];
+        if (!target) return api.sendMessage(`ᴜꜱᴀɢᴇ: /addadmin @ᴜꜱᴇʀ${timeFooter()}`, event.threadID);
+
+        const adminList = getAdminList(config);
+        if (adminList.includes(target)) {
+            return api.sendMessage(`⚠️ ᴀʟʀᴇᴀᴅʏ ᴀɴ ᴀᴅᴍɪɴ${timeFooter()}`, event.threadID);
+        }
+
+        try {
+            const newConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+            if (!Array.isArray(newConfig.botAdmins)) {
+                newConfig.botAdmins = newConfig.botAdmins.split(",").map(id => id.trim()).filter(id => id);
+            }
+            newConfig.botAdmins.push(target);
+            fs.writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
+
+            if (!Array.isArray(config.botAdmins)) {
+                config.botAdmins = config.botAdmins.split(",").map(id => id.trim()).filter(id => id);
+            }
+            config.botAdmins.push(target);
+
+            const name = event.mentions[target] ? event.mentions[target].replace('@', '') : target;
+            api.sendMessage(
+                `🛡️ 𝐍ᴇᴡ 𝐁ᴏᴛ 𝐀ᴅᴍɪɴ ᴀᴅᴅᴇᴅ!
+━━━━━━━━━━━━━━━━━━━━━━━━
+👤 ${name}
+🆔 ${target}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ꜱʏꜱᴛᴇᴍ${timeFooter()}`,
+                event.threadID
+            );
+        } catch (e) {
+            api.sendMessage(`❌ ꜰᴀɪʟᴇᴅ: ${e.message}${timeFooter()}`, event.threadID);
+        }
+    },
+
+    // Bot Admin সরানো
+    removeadmin: async (api, event, args, config) => {
+        const { getOwnerList, getAdminList, timeFooter } = require('../utils');
+        const ownerList = getOwnerList(config);
+
+        if (!ownerList.includes(event.senderID)) {
+            return api.sendMessage(`🚫 𝐎ᴡɴᴇʀ ᴏɴʟʏ ᴄᴏᴍᴍᴀɴᴅ${timeFooter()}`, event.threadID);
+        }
+
+        const target = Object.keys(event.mentions || {})[0] || args[0];
+        if (!target) return api.sendMessage(`ᴜꜱᴀɢᴇ: /removeadmin @ᴜꜱᴇʀ${timeFooter()}`, event.threadID);
+
+        const adminList = getAdminList(config);
+        if (!adminList.includes(target)) {
+            return api.sendMessage(`⚠️ ᴜꜱᴇʀ ɪꜱ ɴᴏᴛ ᴀɴ ᴀᴅᴍɪɴ${timeFooter()}`, event.threadID);
+        }
+
+        try {
+            const newConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+            if (!Array.isArray(newConfig.botAdmins)) {
+                newConfig.botAdmins = newConfig.botAdmins.split(",").map(id => id.trim()).filter(id => id);
+            }
+            newConfig.botAdmins = newConfig.botAdmins.filter(id => id !== target);
+            fs.writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
+
+            if (!Array.isArray(config.botAdmins)) {
+                config.botAdmins = config.botAdmins.split(",").map(id => id.trim()).filter(id => id);
+            }
+            config.botAdmins = config.botAdmins.filter(id => id !== target);
+
+            const name = event.mentions[target] ? event.mentions[target].replace('@', '') : target;
+            api.sendMessage(
+                `🛡️ 𝐀ᴅᴍɪɴ ʀᴇᴍᴏᴠᴇᴅ
+━━━━━━━━━━━━━━━━━━━━━━━━
+👤 ${name}
+🆔 ${target}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ꜱʏꜱᴛᴇᴍ${timeFooter()}`,
+                event.threadID
+            );
+        } catch (e) {
+            api.sendMessage(`❌ ꜰᴀɪʟᴇᴅ: ${e.message}${timeFooter()}`, event.threadID);
+        }
+    },
+
+    // সব Admin লিস্ট
+    adminlistall: async (api, event, args, config) => {
+        const { getAdminList, timeFooter } = require('../utils');
+        const adminList = getAdminList(config);
+
+        let msg = `🛡️ 𝐁ᴏᴛ 𝐀ᴅᴍɪɴ 𝐋ɪꜱᴛ\n━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        msg += `📊 ᴛᴏᴛᴀʟ: ${adminList.length}\n\n`;
+
+        for (let i = 0; i < adminList.length; i++) {
+            const id = adminList[i];
+            try {
+                const info = await new Promise(r => api.getUserInfo(id, (e, ret) => r(e ? null : ret[id])));
+                const name = info ? info.name : "Unknown";
+                msg += `${i + 1}. ${name}\n   🆔 ${id}\n`;
+            } catch (e) {
+                msg += `${i + 1}. 🆔 ${id}\n`;
+            }
+        }
+        msg += `━━━━━━━━━━━━━━━━━━━━━━━━\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ꜱʏꜱᴛᴇᴍ${timeFooter()}`;
+        api.sendMessage(msg, event.threadID);
+    },
+
+
 
 };

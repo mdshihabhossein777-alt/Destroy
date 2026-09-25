@@ -25,7 +25,7 @@ function timeFooter() {
     return `\n\nᴛɪᴍᴇ: ${date} | ${time}\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌\nᴅʜᴀᴋᴀ, ʙᴅ`;
 }
 
-// ==================== Role System ====================
+// ==================== 👑 Role System ====================
 const ROLE_LEVELS = {
     "public": 0,
     "mod": 1,
@@ -34,27 +34,57 @@ const ROLE_LEVELS = {
     "owner": 4
 };
 
+// ✅ Owner List বের করা (String বা Array — দুইটাই সাপোর্ট)
+function getOwnerList(config) {
+    if (!config.owner) return [];
+    if (Array.isArray(config.owner)) return config.owner.map(id => String(id).trim()).filter(id => id);
+    if (typeof config.owner === "string") return config.owner.split(",").map(id => id.trim()).filter(id => id);
+    return [];
+}
+
+// ✅ Admin List বের করা
+function getAdminList(config) {
+    if (!config.botAdmins) return [];
+    if (Array.isArray(config.botAdmins)) return config.botAdmins.map(id => String(id).trim()).filter(id => id);
+    if (typeof config.botAdmins === "string") return config.botAdmins.split(",").map(id => id.trim()).filter(id => id);
+    return [];
+}
+
+// ✅ ইউজারের রোল বের করা
 async function getUserRole(api, event, config) {
     const senderID = event.senderID;
     const threadID = event.threadID;
     const db = getDB();
 
-    if (senderID === config.owner) return "owner";
-    if (config.botAdmins && config.botAdmins.includes(senderID)) return "botadmin";
-    if (db.roles[threadID] && db.roles[threadID][senderID]) return db.roles[threadID][senderID];
+    // Owner Check
+    const ownerList = getOwnerList(config);
+    if (ownerList.includes(senderID)) return "owner";
 
+    // Bot Admin Check
+    const adminList = getAdminList(config);
+    if (adminList.includes(senderID)) return "botadmin";
+
+    // Custom Role Check
+    if (db.roles[threadID] && db.roles[threadID][senderID]) {
+        return db.roles[threadID][senderID];
+    }
+
+    // Group Admin Check
     try {
         const info = await new Promise(r => api.getThreadInfo(threadID, (e, i) => r(e ? null : i)));
         if (info && info.adminIDs && info.adminIDs.some(a => a.id === senderID)) {
             return "groupadmin";
         }
     } catch (e) {}
+    
     return "public";
 }
 
 async function hasPermission(api, event, config, requiredRole) {
     const userRole = await getUserRole(api, event, config);
-    return (ROLE_LEVELS[userRole] || 0) >= (ROLE_LEVELS[requiredRole] || 0);
+    const userLevel = ROLE_LEVELS[userRole] || 0;
+    const requiredLevel = ROLE_LEVELS[requiredRole] || 0;
+    return userLevel >= requiredLevel;
 }
 
 function permissionDenied(api, event, requiredRole) {
@@ -67,7 +97,6 @@ function permissionDenied(api, event, requiredRole) {
         event.threadID
     );
 }
-
 // ==================== Anime GIF ====================
 const WAIFU_API = "https://api.waifu.pics/sfw";
 
@@ -451,8 +480,8 @@ module.exports = {
     SLOW_MODE, sleep, isGroupThrottled,
     isBot, sendAdvancedGif, fetchAdvancedGif,
     generateWelcomeCard, checkPrefix,
-    getDhakaTime, getHourDhaka, isDayTime,   // ← নতুন
-    shouldRestart, addPingHistory, getAvgPing,  // ← নতুন
-    cleanOldData, healthCheck   // ← নতুন
-    
+    getDhakaTime, getHourDhaka, isDayTime,
+    shouldRestart, addPingHistory, getAvgPing,
+    cleanOldData, healthCheck,
+    getOwnerList, getAdminList   // ← এই দুটি যোগ করুন
 };
