@@ -317,44 +317,60 @@ login({ appState }, (err, api) => {
                 }
             }
 
-            // ==================== 🎉 WELCOME EVENT ====================
-if (event.logMessageType === "log:subscribe") {
-    const added = event.logMessageData?.addedParticipants || [];
-    const botID = api.getCurrentUserID();
-    const isBotJoined = added.some(p => p.userFbId === botID);
+                      // ==================== 🎉 WELCOME EVENT ====================
+            if (event.logMessageType === "log:subscribe") {
+                const added = event.logMessageData?.addedParticipants || [];
+                const botID = api.getCurrentUserID();
+                const isBotJoined = added.some(p => p.userFbId === botID);
 
-    if (isBotJoined) {
-        api.sendMessage(`👻 ᴛʜᴀɴᴋꜱ ꜰᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ!\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌\n✅ ᴛʏᴘᴇ "bot active"${timeFooter()}`, tid);
-    } else {
-        try {
-            const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
-            const gname = info?.threadName || "SAYONARA NO MERCY - さよなら";
-            const mcount = info?.participantIDs?.length || 0;
+                if (isBotJoined) {
+                    api.sendMessage(`👻 ᴛʜᴀɴᴋꜱ ꜰᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ!\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌\n✅ ᴛʏᴘᴇ "bot active"${timeFooter()}`, tid);
+                } else {
+                    try {
+                        // গ্রুপ তথ্য সংগ্রহ
+                        const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
+                        
+                        // গ্রুপের নাম
+                        const gname = info?.threadName || config.groupName || "SAYONARA NO MERCY - さよなら";
+                        
+                        // ✅ মেম্বার কাউন্ট সঠিকভাবে বের করা
+                        let mcount = 0;
+                        if (info && info.participantIDs) {
+                            if (Array.isArray(info.participantIDs)) {
+                                mcount = info.participantIDs.length;
+                            } else if (typeof info.participantIDs === 'object') {
+                                mcount = Object.keys(info.participantIDs).length;
+                            }
+                        }
+                        if (mcount === 0) mcount = 100;
 
-            // কে অ্যাড করলো?
-            let addedBy = "Unknown";
-            try {
-                const adminInfo = await new Promise(r => api.getUserInfo(event.author, (e, ret) => r(e ? null : ret[event.author])));
-                if (adminInfo) addedBy = adminInfo.name;
-            } catch (e) {}
+                        // কে অ্যাড করলো
+                        let addedBy = "Unknown";
+                        try {
+                            const adminInfo = await new Promise(r => api.getUserInfo(event.author, (e, ret) => r(e ? null : ret[event.author])));
+                            if (adminInfo && adminInfo.name) addedBy = adminInfo.name;
+                        } catch (e) {}
 
-            // বর্তমান দিন ও সময়
-            const now = new Date();
-            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            const dayName = days[now.getDay()];
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const year = now.getFullYear();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            const dateStr = `${dayName}, ${month}/${day}/${year}, ${hours}:${minutes}:${seconds} ${hours >= 12 ? 'PM' : 'AM'}`;
+                        // তারিখ ও সময়
+                        const now = new Date();
+                        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const dayName = days[now.getDay()];
+                        const month = String(now.getMonth() + 1).padStart(2, '0');
+                        const day = String(now.getDate()).padStart(2, '0');
+                        const year = now.getFullYear();
+                        let hours = now.getHours();
+                        const ampm = hours >= 12 ? 'PM' : 'AM';
+                        hours = hours % 12 || 12;
+                        const hoursStr = String(hours).padStart(2, '0');
+                        const minutes = String(now.getMinutes()).padStart(2, '0');
+                        const seconds = String(now.getSeconds()).padStart(2, '0');
+                        const dateStr = `${dayName}, ${month}/${day}/${year}, ${hoursStr}:${minutes}:${seconds} ${ampm}`;
 
-            for (const p of added) {
-                const name = p.fullName || "New Member";
+                        for (const p of added) {
+                            const name = p.fullName || "New Member";
 
-                // Welcome Text Message
-                const welcomeText = `Hello ${name}
+                            // টেক্সট Message
+                            const welcomeText = `Hello ${name}
 Welcome to ${gname}
 You're the ${mcount} member on this group, please enjoy 🎉
 
@@ -362,40 +378,51 @@ You're the ${mcount} member on this group, please enjoy 🎉
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📅 ${dateStr}${timeFooter()}`;
 
-                // Avatar URL
-                const avatarUrl = `https://graph.facebook.com/${p.userFbId}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+                            // Avatar URL
+                            const avatarUrl = `https://graph.facebook.com/${p.userFbId}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
 
-                // Welcome Card তৈরি
-                const cardBuffer = await generateWelcomeCard(name, avatarUrl, gname, mcount, addedBy, dateStr);
+                            // টেক্সট মেসেজ আগে পাঠান
+                            api.sendMessage({
+                                body: welcomeText,
+                                mentions: [{ tag: name, id: p.userFbId }]
+                            }, tid);
 
-                if (cardBuffer) {
-                    const { PassThrough } = require('stream');
-                    const stream = new PassThrough();
-                    stream.end(cardBuffer);
+                            await sleep(1500);
 
-                    // প্রথমে টেক্সট মেসেজ
-                    api.sendMessage({
-                        body: welcomeText,
-                        mentions: [{ tag: name, id: p.userFbId }]
-                    }, tid);
+                            // ✅ Welcome Card তৈরি ও পাঠান
+                            try {
+                                const cardBuffer = await generateWelcomeCard(
+                                    name,
+                                    avatarUrl,
+                                    gname,
+                                    mcount,
+                                    addedBy,
+                                    dateStr
+                                );
 
-                    await sleep(1500);
+                                if (cardBuffer && cardBuffer.length > 500) {
+                                    const { PassThrough } = require('stream');
+                                    const stream = new PassThrough();
+                                    stream.end(cardBuffer);
+                                    
+                                    api.sendMessage({ attachment: stream }, tid);
+                                    console.log(`✅ Welcome card sent for ${name}`);
+                                } else {
+                                    console.log(`⚠️ Card buffer empty for ${name}, using fallback GIF`);
+                                    await sendAdvancedGif(api, event, "🎉 Welcome!", 'welcome');
+                                }
+                            } catch (cardError) {
+                                console.error("Card error:", cardError.message);
+                                await sendAdvancedGif(api, event, "🎉 Welcome!", 'welcome');
+                            }
 
-                    // তারপর কার্ড
-                    api.sendMessage({
-                        attachment: stream
-                    }, tid);
-                } else {
-                    await sendAdvancedGif(api, event, welcomeText, 'welcome', [{ tag: name, id: p.userFbId }]);
+                            await sleep(2000);
+                        }
+                    } catch (e) {
+                        console.error("Welcome error:", e.message);
+                    }
                 }
-
-                await sleep(2000);
             }
-        } catch (e) {
-            console.error("Welcome error:", e.message);
-        }
-    }
-}
 
             // LEFT
             if (event.logMessageType === "log:unsubscribe") {

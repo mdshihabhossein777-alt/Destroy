@@ -192,45 +192,28 @@ function isGroupThrottled(threadID) {
     return false;
 }
 
-// ==================== 🎨 Welcome Card Generator ====================
 async function generateWelcomeCard(userName, userAvatar, groupName, memberCount, addedBy, dateStr) {
     try {
         const canvas = createCanvas(700, 300);
         const ctx = canvas.getContext('2d');
 
-        // Background Image (গ্রুপের ব্যানার)
-        try {
-            const bgImg = await loadImage('https://i.imgur.com/9YdvXbP.png');
-            ctx.drawImage(bgImg, 0, 0, 700, 300);
-        } catch (e) {
-            // Fallback gradient
-            const gradient = ctx.createLinearGradient(0, 0, 700, 300);
-            gradient.addColorStop(0, '#1a1a2e');
-            gradient.addColorStop(1, '#16213e');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 700, 300);
-        }
+        // Background
+        const gradient = ctx.createLinearGradient(0, 0, 700, 300);
+        gradient.addColorStop(0, '#1a1a2e');
+        gradient.addColorStop(1, '#16213e');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 700, 300);
 
         // Dark overlay
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, 700, 300);
 
-        // Top bar with group name
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, 700, 50);
+        // Border
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(10, 10, 680, 280);
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 22px Arial';
-        ctx.textAlign = 'left';
-        const shortGroup = groupName.length > 35 ? groupName.slice(0, 32) + '...' : groupName;
-        ctx.fillText(shortGroup, 20, 33);
-
-        // Member count on top right
-        ctx.textAlign = 'right';
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText(`${memberCount} Members`, 680, 33);
-
-        // Avatar with circle
+        // Avatar
         if (userAvatar) {
             try {
                 const avatarImg = await loadImage(userAvatar);
@@ -242,10 +225,10 @@ async function generateWelcomeCard(userName, userAvatar, groupName, memberCount,
                 ctx.drawImage(avatarImg, 50, 110, 140, 140);
                 ctx.restore();
 
-                // White border
+                // Avatar border
                 ctx.beginPath();
                 ctx.arc(120, 180, 70, 0, Math.PI * 2);
-                ctx.strokeStyle = '#ffffff';
+                ctx.strokeStyle = '#ffd700';
                 ctx.lineWidth = 4;
                 ctx.stroke();
             } catch (e) {
@@ -253,42 +236,45 @@ async function generateWelcomeCard(userName, userAvatar, groupName, memberCount,
             }
         }
 
-        // Welcome text
-        ctx.textAlign = 'center';
+        // WELCOME text
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 45px Georgia';
-        ctx.fillText('Welcome', 400, 130);
+        ctx.textAlign = 'center';
+        ctx.fillText('Welcome', 400, 110);
 
         // User name
         ctx.font = 'bold 32px Arial';
         ctx.fillStyle = '#ffd700';
         const shortName = userName.length > 25 ? userName.slice(0, 22) + '...' : userName;
-        ctx.fillText(shortName, 400, 175);
+        ctx.fillText(shortName, 400, 160);
 
-        // Date & Time
-        ctx.font = '15px Arial';
-        ctx.fillStyle = '#cccccc';
-        ctx.fillText(dateStr, 400, 210);
+        // Group name
+        ctx.font = '20px Arial';
+        ctx.fillStyle = '#ffffff';
+        const shortGroup = groupName.length > 30 ? groupName.slice(0, 27) + '...' : groupName;
+        ctx.fillText(shortGroup, 400, 200);
+
+        // Member count
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#b0b0b0';
+        ctx.fillText(`You're the ${memberCount}th member`, 400, 230);
 
         // Added by
-        if (addedBy) {
-            ctx.font = '14px Arial';
-            ctx.fillStyle = '#a0a0a0';
-            ctx.fillText(`Added by: ${addedBy}`, 400, 240);
-        }
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#a0a0a0';
+        ctx.fillText(`Added by: ${addedBy}`, 400, 255);
 
-        // Bottom brand
+        // Branding
         ctx.font = 'bold 14px Arial';
         ctx.fillStyle = '#00d4ff';
-        ctx.fillText('💀 SAYONARA SYSTEM 💀', 400, 280);
+        ctx.fillText('💀 SAYONARA SYSTEM 💀', 400, 285);
 
-        return canvas.toBuffer();
+        return canvas.toBuffer('image/png');
     } catch (e) {
         console.error("Card generation error:", e.message);
         return null;
     }
 }
-
 
 
 module.exports = {
