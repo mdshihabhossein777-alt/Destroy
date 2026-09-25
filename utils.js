@@ -276,6 +276,139 @@ async function generateWelcomeCard(userName, userAvatar, groupName, memberCount,
     }
 }
 
+// ==================== ⏰ TIME SYSTEM ====================
+
+// ঢাকার সঠিক সময়
+function getDhakaTime() {
+    const now = new Date();
+    const options = { 
+        timeZone: 'Asia/Dhaka',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    };
+    return now.toLocaleString('en-GB', options);
+}
+
+// সময় থেকে ঘণ্টা বের করা
+function getHourDhaka() {
+    const now = new Date();
+    const dhakaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+    return dhakaTime.getHours();
+}
+
+// এখন দিন না রাত
+function isDayTime() {
+    const hour = getHourDhaka();
+    return hour >= 6 && hour < 20;
+}
+
+// Auto-Restart সিস্টেম
+let lastRestart = Date.now();
+const RESTART_INTERVAL = 6 * 60 * 60 * 1000; // ৬ ঘণ্টা
+
+function shouldRestart() {
+    if (Date.now() - lastRestart > RESTART_INTERVAL) {
+        lastRestart = Date.now();
+        return true;
+    }
+    return false;
+}
+
+// Keep-Alive পিং হিস্টোরি
+const pingHistory = [];
+const MAX_PING_HISTORY = 20;
+
+function addPingHistory(responseTime) {
+    pingHistory.push({
+        time: Date.now(),
+        responseTime
+    });
+    if (pingHistory.length > MAX_PING_HISTORY) {
+        pingHistory.shift();
+    }
+}
+
+function getAvgPing() {
+    if (pingHistory.length === 0) return 0;
+    const sum = pingHistory.reduce((a, b) => a + b.responseTime, 0);
+    return Math.round(sum / pingHistory.length);
+}
+
+// Cache Cleanup সিস্টেম
+function cleanOldData() {
+    try {
+        const db = getDB();
+        const now = Date.now();
+        const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+        let cleaned = 0;
+
+        // পুরনো AFK ডিলিট
+        if (db.afk) {
+            for (const uid in db.afk) {
+                if (now - (db.afk[uid].time || 0) > SEVEN_DAYS) {
+                    delete db.afk[uid];
+                    cleaned++;
+                }
+            }
+        }
+
+        // পুরনো ওয়ার্নিং ডিলিট
+        if (db.warnings) {
+            for (const tid in db.warnings) {
+                for (const uid in db.warnings[tid]) {
+                    if (db.warnings[tid][uid] === 0) {
+                        delete db.warnings[tid][uid];
+                        cleaned++;
+                    }
+                }
+            }
+        }
+
+        // খালি গ্রুপ ডিলিট
+        if (db.groups) {
+            for (const tid in db.groups) {
+                if (!db.groups[tid].lastSeen || now - db.groups[tid].lastSeen > 30 * 24 * 60 * 60 * 1000) {
+                    delete db.groups[tid];
+                    cleaned++;
+                }
+            }
+        }
+
+        saveDB(db);
+        return cleaned;
+    } catch (e) {
+        return 0;
+    }
+}
+
+// System Health Check
+function healthCheck() {
+    const mem = process.memoryUsage();
+    const uptime = process.uptime();
+
+    return {
+        status: "healthy",
+        uptime: Math.floor(uptime),
+        uptimeHuman: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
+        memoryUsed: Math.round(mem.heapUsed / 1024 / 1024),
+        memoryTotal: Math.round(mem.heapTotal / 1024 / 1024),
+        avgPing: getAvgPing(),
+        time: getDhakaTime(),
+        isDay: isDayTime()
+    };
+}
+
+// module.exports এ যোগ করুন
+
+
+
+
+
 
 module.exports = {
     getDB, saveDB, timeFooter, ROLE_LEVELS,
@@ -283,5 +416,8 @@ module.exports = {
     fetchAnimeGif, sendWithGif, guessGender,
     SLOW_MODE, sleep, isGroupThrottled,
     isBot, sendAdvancedGif, fetchAdvancedGif,
-    generateWelcomeCard   // ← নতুন
+    generateWelcomeCard, checkPrefix,
+    getDhakaTime, getHourDhaka, isDayTime,   // ← নতুন
+    shouldRestart, addPingHistory, getAvgPing,  // ← নতুন
+    cleanOldData, healthCheck   // ← নতুন
 };

@@ -1,95 +1,198 @@
 const axios = require('axios');
-const { getDB, saveDB, timeFooter, sendWithGif, fetchAnimeGif, guessGender, sendAdvancedGif } = require('../utils');
+const { 
+    getDB, saveDB, timeFooter, sendWithGif, fetchAnimeGif, 
+    guessGender, sendAdvancedGif, getDhakaTime 
+} = require('../utils');
 
 module.exports = {
 
     // ==================== HELP ====================
     help: async (api, event, args, config) => {
-        const msg = `╔══════════════════════════════╗
-   💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌
-        HELP MENU
-╚══════════════════════════════╝
+        const threadInfo = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
+        const groupName = threadInfo?.threadName || config.groupName || "SAYONARA NO MERCY";
+        
+        const msg = `╔══════════════════════════════════╗
+   💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐍𝐎 𝐌𝐄𝐑𝐂𝐘
+        𝗛𝗘𝗟𝗣 𝗠𝗘𝗡𝗨
+╚══════════════════════════════════╝
 
-📖 ᴘᴀɢᴇ 1 - ᴍᴇᴍʙᴇʀ
-📖 ᴘᴀɢᴇ 2 - ꜰᴜɴ + ᴘʀᴀɴᴋ
-📖 ᴘᴀɢᴇ 3 - ɢʀᴏᴜᴘ ᴀᴅᴍɪɴ
-📖 ᴘᴀɢᴇ 4 - ꜱᴇᴄᴜʀɪᴛʏ
-
-ᴜꜱᴇ: /page1 /page2 /page3 /page4
+🏴 ɢʀᴏᴜᴘ: ${groupName}
+👨‍💻 ᴅᴇᴠ: ${config.developer}
+💀 ʙᴏᴛ: 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌
+⚙️ ᴠᴇʀꜱɪᴏɴ: ${config.version}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
+📖 ᴘᴀɢᴇ ᴄᴏᴍᴍᴀɴᴅꜱ
+━━━━━━━━━━━━━━━━━━━━━━━━
+📄 /page1 - ᴍᴇᴍʙᴇʀ ᴄᴍᴅꜱ
+📄 /page2 - ꜰᴜɴ + ᴘʀᴀɴᴋ
+📄 /page3 - ɢʀᴏᴜᴘ ᴀᴅᴍɪɴ
+📄 /page4 - ꜱᴇᴄᴜʀɪᴛʏ
+📄 /page5 - ꜱᴜᴅᴏ ᴏɴʟʏ
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 Qᴜɪᴄᴋ ᴄᴏᴍᴍᴀɴᴅꜱ
+━━━━━━━━━━━━━━━━━━━━━━━━
+/ping - ʙᴏᴛ ꜱᴛᴀᴛᴜꜱ
+/uid - ʏᴏᴜʀ ɪᴅ
+/time - ᴅʜᴀᴋᴀ ᴛɪᴍᴇ
+/owner - ᴏᴡɴᴇʀ ɪɴꜰᴏ
+/rules - ɢʀᴏᴜᴘ ʀᴜʟᴇꜱ
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐍ᴏ ᴍᴇʀᴄʏ
 👨‍💻 ᴅᴇᴠ: ${config.developer}
-💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌${timeFooter()}`;
+━━━━━━━━━━━━━━━━━━━━━━━━${timeFooter()}`;
+        
         await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
+    // ==================== PAGE 1 ====================
     page1: async (api, event) => {
         const msg = `📖 PAGE 1 - MEMBER
 ━━━━━━━━━━━━━━━━━━━━━━━━
-/help  /page1-4  /ping  /uid
-/owner  /botinfo  /groupinfo
-/rules  /rank  /leaderboard
-/afk  /balance  /daily  /top
-/pair  /ship  /meme  /8ball
-/say  /poll  /vid
+🧩 CORE
+/help /ping /uid /time
+/owner /botinfo /groupinfo
+/rules /rank /leaderboard
+/afk
 
-💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌${timeFooter()}`;
+💰 ECONOMY
+/balance /daily /top
+
+🎮 FUN
+/pair /ship /meme
+/8ball /roast /truth /dare
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
         await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
+    // ==================== PAGE 2 ====================
     page2: async (api, event) => {
         const msg = `📖 PAGE 2 - FUN + PRANK
 ━━━━━━━━━━━━━━━━━━━━━━━━
-/stalk  /info  /weather
-/crack  /trace  /fbi  /hack
-/darkweb  /expose  /bankhack
-/camera  /gallery  /callhack
-/ddos
+🎬 PRANK (100% FAKE)
+/stalk /crack /trace
+/fbi /hack /darkweb
+/expose /bankhack /camera
+/gallery /callhack /ddos
 
-⚠️ ᴀʟʟ ᴘʀᴀɴᴋꜱ 100% ꜰᴀᴋᴇ
+📊 INFO
+/info /weather
 
-💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ${timeFooter()}`;
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ ᴀʟʟ ᴘʀᴀɴᴋꜱ ᴀʀᴇ 100% ꜰᴀᴋᴇ
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
         await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
+    // ==================== PAGE 3 ====================
     page3: async (api, event) => {
         const msg = `📖 PAGE 3 - GROUP ADMIN
 ━━━━━━━━━━━━━━━━━━━━━━━━
-/kick  /ban  /unban
-/setrole  /removerole
-/setrules  /warn  /warnlist
-/lockname  /lockphoto  /locknick
-/massnick  /autonick  /resetnick
-/antlink  /antigali
-/antisticker  /antigif  /antiphone
-/blacklist  /slowmode
+📊 GROUP INFO
+/members /adminlist
+/tagall /tagadmin
 
-💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ${timeFooter()}`;
-        await sendAdvancedGif(api, event, msg, 'itachi');
-    },
+⚔️ MODERATION
+/kick /ban /unban
+/warn /warnlist
+/setrules /setrole
+/removerole
 
-    page4: async (api, event) => {
-        const msg = `📖 PAGE 4 - BRUTAL SECURITY
+🔒 LOCK SYSTEM
+/lockname /lockphoto
+/locknick /antlink
+/antigali /antisticker
+/antigif /antiphone
+/slowmode /blacklist
+
+🏷️ NICKNAME
+/autonick /resetnick
+/massnick
+
 ━━━━━━━━━━━━━━━━━━━━━━━━
-/security  /war
-/antibot  /botscan  /botkill
-/antiraid  /allmute  /allunmute
-/lockall  /unlockall  /shield
-/onlyadmin  /onlymod  /botlock
-/botoff  /boton  /botlocklist
-/addadmin  /removeadmin
-/restart  /maintenance
-/status  /active  /topignore
-/welcome  /goodbye  /notify
-/broadcast  /grouplist  /clearcache
-/bothunt  /botdestroyer  /sayonara
-/ainfo  /antibotauto  /sinfo  /sstatus
-
-💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ${timeFooter()}`;
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
         await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
-    // ==================== CORE ====================
+    // ==================== PAGE 4 ====================
+    page4: async (api, event) => {
+        const msg = `📖 PAGE 4 - SECURITY
+━━━━━━━━━━━━━━━━━━━━━━━━
+🔥 MASTER
+/security /war
+
+🛡️ SECURITY
+/antibot /botscan
+/botkill /antiraid
+/allmute /allunmute
+/lockall /unlockall
+/shield /onlyadmin
+/onlymod /botlock
+/botoff /boton
+/botlocklist /antibotauto
+/bothunt /botdestroyer
+/sayonara
+
+🛠️ BOT ADMIN
+/status /maintenance
+/active /topignore
+/welcome /goodbye
+/ainfo /sinfo
+/sstatus /health
+/uptime
+
+👑 OWNER
+/addadmin /removeadmin
+/restart /notify
+/broadcast /grouplist
+/clearcache
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
+        await sendAdvancedGif(api, event, msg, 'itachi');
+    },
+
+    // ==================== PAGE 5 ====================
+        page5: async (api, event) => {
+        const msg = `📖 PAGE 5 - SUDO ONLY
+━━━━━━━━━━━━━━━━━━━━━━━━
+⛔ 𝐎𝐖𝐍𝐄𝐑 𝐎𝐍𝐋𝐘 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+💀 GROUP DESTROY
+/botout           - ʙᴏᴛ ʟᴇᴀᴠᴇ ɢʀᴏᴜᴘ
+/masskick @u      - ᴍᴀꜱꜱ ᴋɪᴄᴋ (10 ᴍᴀx)
+/massnick [n]     - ᴍᴀꜱꜱ ɴɪᴄᴋɴᴀᴍᴇ
+/nuke             - ꜰᴜʟʟ ɴᴜᴋᴇ ʟᴏᴄᴋ
+/cleanadmin       - ʀᴇᴍᴏᴠᴇ ᴀʟʟ ᴀᴅᴍɪɴꜱ
+/groupreset       - ʀᴇꜱᴇᴛ ɢʀᴏᴜᴘ
+
+🛠️ BOT SYSTEM
+/autorejoin       - ᴀᴜᴛᴏ ʀᴇᴊᴏɪɴ
+/antidead         - ᴅᴇᴀᴅ ʙᴏᴛ ɪɢɴᴏʀᴇ
+/shieldmax        - ᴀᴅᴍɪɴ ꜱʜɪᴇʟᴅ
+/selfhide         - ʙᴏᴛ ʜɪᴅᴇ
+/clean            - ᴄᴀᴄʜᴇ ᴄʟᴇᴀɴ
+/cooldown [s]     - ᴅᴇʟᴀʏ ꜱᴇᴛ
+/selfkill         - ᴏꜰꜰʟɪɴᴇ ᴍᴏᴅᴇ
+
+⚔️ BRUTAL CONTROL
+/ghostkick @u     - ꜰᴏʀᴄᴇ ᴋɪᴄᴋ
+/nickwar @u       - ɴɪᴄᴋ ᴡᴀʀ
+/warnkill         - 3 ᴡᴀʀɴ = ᴋɪᴄᴋ
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+⛔ 𝐎ᴡɴᴇʀ ᴏɴʟʏ ᴀᴄᴄᴇꜱꜱ
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
+        await sendAdvancedGif(api, event, msg, 'itachi');
+    },
+
+    // ==================== PING ====================
     ping: (api, event) => {
         const start = Date.now();
         api.sendMessage("🏓 ᴘᴏɴɢ", event.threadID, () => {
@@ -97,6 +200,7 @@ module.exports = {
         });
     },
 
+    // ==================== UID ====================
     uid: async (api, event) => {
         const mentions = Object.keys(event.mentions || {});
         if (mentions.length > 0) {
@@ -110,35 +214,44 @@ module.exports = {
         }
     },
 
+    // ==================== TIME ====================
+    time: async (api, event) => {
+        const time = getDhakaTime();
+        api.sendMessage(`🕐 𝐃𝐇𝐀𝐊𝐀 𝐓𝐈𝐌𝐄\n━━━━━━━━━━━━━━━━━━━━━━━━\n⏰ ${time}${timeFooter()}`, event.threadID);
+    },
+
+    // ==================== OWNER ====================
     owner: async (api, event, args, config) => {
         const msg = `👑 𝐎𝐖𝐍𝐄𝐑 𝐈𝐍𝐅𝐎
 ━━━━━━━━━━━━━━━━━━━━━━━━
 👤 Ariyan Shihab
-🌹 কীট গোলাপ
+🌹 sexy boy
 🎂 21+ | 📚 Student
 📍 Naoagon, Bangladesh
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📘 https://facebook.com/mdshihabofc
 💬 https://m.me/mdshihabofc
 ━━━━━━━━━━━━━━━━━━━━━━━━
-💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ${timeFooter()}`;
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
         await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
+    // ==================== BOTINFO ====================
     botinfo: (api, event, args, config) => {
         const up = process.uptime();
         const h = Math.floor(up / 3600), m = Math.floor((up % 3600) / 60);
-        const msg = `💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ ɪɴꜰᴏ
+        const msg = `💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ ɪɴꜰᴏ
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🤖 ɴᴀᴍᴇ: ${config.botName}
 ⚙️ ᴠᴇʀꜱɪᴏɴ: ${config.version}
-📦 ᴄᴏᴍᴍᴀɴᴅꜱ: 90+
+📦 ᴄᴏᴍᴍᴀɴᴅꜱ: 107+
 ⏱️ ᴜᴘᴛɪᴍᴇ: ${h}ʜ ${m}ᴍ
 🛠️ ᴅᴇᴠ: ${config.developer}
 ━━━━━━━━━━━━━━━━━━━━━━━━${timeFooter()}`;
         api.sendMessage(msg, event.threadID);
     },
 
+    // ==================== GROUPINFO ====================
     groupinfo: async (api, event) => {
         api.getThreadInfo(event.threadID, (err, info) => {
             if (err) return;
@@ -151,18 +264,21 @@ module.exports = {
         });
     },
 
+    // ==================== RULES ====================
     rules: (api, event) => {
         const db = getDB();
         const rules = db.groups[event.threadID]?.rules || "ɴᴏ ʀᴜʟᴇꜱ ꜱᴇᴛ";
         api.sendMessage(`📜 𝐆𝐑𝐎𝐔𝐏 𝐑𝐔𝐋𝐄𝐒\n━━━━━━━━━━━━━━━━━━━━━━━━\n${rules}${timeFooter()}`, event.threadID);
     },
 
+    // ==================== RANK ====================
     rank: (api, event) => {
         const db = getDB();
         const user = db.users?.[event.senderID] || { points: 0 };
         api.sendMessage(`🏅 𝐘𝐎𝐔𝐑 𝐑𝐀𝐍𝐊\n━━━━━━━━━━━━━━━━━━━━━━━━\n👤 ᴘᴏɪɴᴛꜱ: ${user.points || 0}${timeFooter()}`, event.threadID);
     },
 
+    // ==================== LEADERBOARD ====================
     leaderboard: (api, event) => {
         const db = getDB();
         const users = Object.entries(db.users || {}).sort((a, b) => (b[1].points || 0) - (a[1].points || 0)).slice(0, 10);
@@ -171,6 +287,7 @@ module.exports = {
         api.sendMessage(msg + timeFooter(), event.threadID);
     },
 
+    // ==================== AFK ====================
     afk: async (api, event, args) => {
         const db = getDB();
         if (!db.afk) db.afk = {};
@@ -180,13 +297,14 @@ module.exports = {
         api.sendMessage(`💤 𝐀𝐅𝐊 ᴀᴄᴛɪᴠᴀᴛᴇᴅ\n📝 ʀᴇᴀꜱᴏɴ: ${reason}${timeFooter()}`, event.threadID);
     },
 
-    // ==================== ECONOMY ====================
+    // ==================== BALANCE ====================
     balance: (api, event) => {
         const db = getDB();
         const user = db.users?.[event.senderID] || { coins: 0 };
         api.sendMessage(`💰 𝐘𝐎𝐔𝐑 𝐁𝐀𝐋𝐀𝐍𝐂𝐄\n━━━━━━━━━━━━━━━━━━━━━━━━\n💎 ᴄᴏɪɴꜱ: ${user.coins || 0}${timeFooter()}`, event.threadID);
     },
 
+    // ==================== DAILY ====================
     daily: async (api, event) => {
         const db = getDB();
         if (!db.users) db.users = {};
@@ -203,6 +321,7 @@ module.exports = {
         api.sendMessage(`✅ ᴄʟᴀɪᴍᴇᴅ 500 ᴄᴏɪɴꜱ!\n💰 ᴛᴏᴛᴀʟ: ${db.users[event.senderID].coins}${timeFooter()}`, event.threadID);
     },
 
+    // ==================== TOP ====================
     top: (api, event) => {
         const db = getDB();
         const users = Object.entries(db.users || {}).sort((a, b) => (b[1].coins || 0) - (a[1].coins || 0)).slice(0, 5);
@@ -211,7 +330,7 @@ module.exports = {
         api.sendMessage(msg + timeFooter(), event.threadID);
     },
 
-    // ==================== FUN ====================
+    // ==================== PAIR ====================
     pair: async (api, event) => {
         try {
             const db = getDB();
@@ -271,6 +390,7 @@ ${comp >= 90 ? "🔥 ᴘᴇʀꜰᴇᴄᴛ ᴍᴀᴛᴄʜ!" : comp >= 75 ? "💕 
         }
     },
 
+    // ==================== SHIP ====================
     ship: async (api, event) => {
         const mentions = Object.keys(event.mentions || {});
         let n1, n2;
@@ -296,6 +416,7 @@ ${comp >= 90 ? "🔥 ᴘᴇʀꜰᴇᴄᴛ ᴍᴀᴛᴄʜ!" : comp >= 75 ? "💕 
         await sendAdvancedGif(api, event, msg, 'love');
     },
 
+    // ==================== MEME ====================
     meme: async (api, event) => {
         try {
             const res = await axios.get('https://meme-api.com/gimme', { timeout: 8000 });
@@ -308,15 +429,48 @@ ${comp >= 90 ? "🔥 ᴘᴇʀꜰᴇᴄᴛ ᴍᴀᴛᴄʜ!" : comp >= 75 ? "💕 
         }
     },
 
+    // ==================== 8BALL ====================
     '8ball': (api, event, args) => {
         const q = args.join(" ");
-        if (!q) return api.sendMessage("Usage: /8ball [question]" + timeFooter(), event.threadID);
+        if (!q) return api.sendMessage("ᴜꜱᴀɢᴇ: /8ball [ǫᴜᴇꜱᴛɪᴏɴ]" + timeFooter(), event.threadID);
         const answers = ["Yes, definitely.", "No, not at all.", "Maybe...", "Ask again later.", "The stars say yes.", "Don't count on it.", "Most likely.", "Very doubtful."];
         const a = answers[Math.floor(Math.random() * answers.length)];
-        api.sendMessage(`🎱 Q: ${q}\nA: ${a}${timeFooter()}`, event.threadID);
+        api.sendMessage(`🎱 ǫ: ${q}\nᴀ: ${a}${timeFooter()}`, event.threadID);
     },
 
-    // ==================== PRANK ====================
+    // ==================== ROAST ====================
+    roast: async (api, event) => {
+        const t = Object.keys(event.mentions || {})[0];
+        const name = t ? event.mentions[t].replace('@', '') : "you";
+        const roasts = [
+            `${name} is so slow that even a turtle would win a race against them!`,
+            `${name} is like a cloud — when they disappear, it's a beautiful day!`,
+            `${name} is the reason shampoo bottles have instructions!`,
+            `${name} is so boring that even their shadow leaves them!`,
+            `${name}'s brain has too many tabs open and none of them are loading!`,
+            `${name} is so ugly that when they were born, the doctor slapped their mother!`,
+            `${name} is so poor that they can't even pay attention!`,
+            `${name} is like a software update — when they appear, you think "not now"!`,
+            `${name} is so weird that even aliens say "We don't want to meet them!"`
+        ];
+        const roast = roasts[Math.floor(Math.random() * roasts.length)];
+        const msg = `🔥 𝐑ᴏᴀꜱᴛ 🔥\n━━━━━━━━━━━━━━━━━━━━━━━━\n${roast}${timeFooter()}`;
+        api.sendMessage({ body: msg, mentions: t ? [{ tag: name, id: t }] : [] }, event.threadID);
+    },
+
+    // ==================== TRUTH ====================
+    truth: (api, event) => {
+        const t = ["What is your biggest fear?", "Who do you love most?", "What is your hidden talent?", "Have you ever lied?", "What's your biggest secret?"];
+        api.sendMessage(`❓ 𝐓ʀᴜᴛʜ\n━━━━━━━━━━━━━━━━━━━━━━━━\n${t[Math.floor(Math.random() * t.length)]}${timeFooter()}`, event.threadID);
+    },
+
+    // ==================== DARE ====================
+    dare: (api, event) => {
+        const d = ["Say your crush's name", "Send a funny video", "Send your last photo", "Sing a song", "Call someone and say I love you"];
+        api.sendMessage(`🔥 𝐃ᴀʀᴇ\n━━━━━━━━━━━━━━━━━━━━━━━━\n${d[Math.floor(Math.random() * d.length)]}${timeFooter()}`, event.threadID);
+    },
+
+    // ==================== PRANK COMMANDS ====================
     stalk: async (api, event) => {
         const t = Object.keys(event.mentions || {})[0];
         const name = t ? event.mentions[t].replace('@', '') : "user";
@@ -325,13 +479,13 @@ ${comp >= 90 ? "🔥 ᴘᴇʀꜰᴇᴄᴛ ᴍᴀᴛᴄʜ!" : comp >= 75 ? "💕 
 
     info: async (api, event, args) => {
         const q = args.join(" ");
-        if (!q) return api.sendMessage("Usage: /info [query]" + timeFooter(), event.threadID);
+        if (!q) return api.sendMessage("ᴜꜱᴀɢᴇ: /info [qᴜᴇʀʏ]" + timeFooter(), event.threadID);
         try {
             const res = await axios.get(`https://api.popcat.xyz/wikipedia/${encodeURIComponent(q)}`, { timeout: 8000 });
-            const text = res.data?.text?.slice(0, 400) || "Nᴏ ɪɴꜰᴏ";
+            const text = res.data?.text?.slice(0, 400) || "ɴᴏ ɪɴꜰᴏ";
             api.sendMessage(`📖 ${q}\n━━━━━━━━━━━━━━━━━━━━━━━━\n${text}...${timeFooter()}`, event.threadID);
         } catch (e) {
-            api.sendMessage("❌ Info failed" + timeFooter(), event.threadID);
+            api.sendMessage("❌ ɪɴꜰᴏ ꜰᴀɪʟᴇᴅ" + timeFooter(), event.threadID);
         }
     },
 
@@ -342,7 +496,7 @@ ${comp >= 90 ? "🔥 ᴘᴇʀꜰᴇᴄᴛ ᴍᴀᴛᴄʜ!" : comp >= 75 ? "💕 
             const c = res.data.current_condition[0];
             api.sendMessage(`🌤️ ᴡᴇᴀᴛʜᴇʀ - ${city}\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌡️ ${c.temp_C}°C\n💧 ${c.humidity}%\n💨 ${c.windspeedKmph} km/h${timeFooter()}`, event.threadID);
         } catch (e) {
-            api.sendMessage("❌ Weather failed" + timeFooter(), event.threadID);
+            api.sendMessage("❌ ᴡᴇᴀᴛʜᴇʀ ꜰᴀɪʟᴇᴅ" + timeFooter(), event.threadID);
         }
     },
 
@@ -417,7 +571,7 @@ ${comp >= 90 ? "🔥 ᴘᴇʀꜰᴇᴄᴛ ᴍᴀᴛᴄʜ!" : comp >= 75 ? "💕 
         const { hasPermission, permissionDenied } = require('../utils');
         if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
         const m = args.join(" ");
-        if (!m) return api.sendMessage("Usage: /say [text]" + timeFooter(), event.threadID);
+        if (!m) return api.sendMessage("ᴜꜱᴀɢᴇ: /say [ᴛᴇxᴛ]" + timeFooter(), event.threadID);
         api.sendMessage(m, event.threadID);
     },
 
@@ -427,7 +581,7 @@ ${comp >= 90 ? "🔥 ᴘᴇʀꜰᴇᴄᴛ ᴍᴀᴛᴄʜ!" : comp >= 75 ? "💕 
     },
 
     vid: async (api, event, args) => {
-        if (!args[0]) return api.sendMessage("Usage: /vid [link]" + timeFooter(), event.threadID);
+        if (!args[0]) return api.sendMessage("ᴜꜱᴀɢᴇ: /vid [ʟɪɴᴋ]" + timeFooter(), event.threadID);
         api.sendMessage("📥 ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ᴠɪᴅᴇᴏ..." + timeFooter(), event.threadID);
     }
 

@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+// Increase memory limit for better performance
+process.env.NODE_OPTIONS = '--max-old-space-size=512';
 const http = require('http');
 const login = require('@dongdev/fca-unofficial');
 const config = require('./config.json');
@@ -576,6 +578,93 @@ setInterval(async () => {
 
 // ==================== HEALTH SERVER ====================
 const PORT = process.env.PORT || 3000;
+
+// ==================== ⏰ TIME SYSTEM SCHEDULERS ====================
+
+// ✅ ১. Keep-Alive Self-Ping (প্রতি ৩ মিনিটে)
+const RENDER_URL = process.env.RENDER_URL || "https://destroy-k66o.onrender.com";
+setInterval(async () => {
+    try {
+        const start = Date.now();
+        await axios.get(RENDER_URL, { timeout: 10000 });
+        const responseTime = Date.now() - start;
+        const { addPingHistory } = require('./utils');
+        addPingHistory(responseTime);
+        console.log(`⏰ [${new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka', hour12: false })}] Keep-Alive: ${responseTime}ms`);
+    } catch (e) {
+        console.log(`⚠️ Keep-Alive failed: ${e.message}`);
+    }
+}, 3 * 60 * 1000); // ৩ মিনিট
+
+// ✅ ২. Health Monitor (প্রতি ৫ মিনিটে)
+setInterval(async () => {
+    try {
+        const { healthCheck, getAvgPing } = require('./utils');
+        const health = healthCheck();
+        
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`💀 SAYONARA HEALTH CHECK`);
+        console.log(`⏱️ Uptime: ${health.uptimeHuman}`);
+        console.log(`💾 Memory: ${health.memoryUsed}MB / ${health.memoryTotal}MB`);
+        console.log(`📡 Avg Ping: ${health.avgPing}ms`);
+        console.log(`🕐 Time: ${health.time}`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+        // রিম লিমিট চেক
+        if (health.memoryUsed > 400) {
+            console.log("⚠️ Memory high! Cleaning...");
+            if (global.gc) global.gc();
+        }
+    } catch (e) {
+        console.error("Health check error:", e.message);
+    }
+}, 5 * 60 * 1000); // ৫ মিনিট
+
+// ✅ ৩. Auto-Restart (প্রতি ৬ ঘণ্টায়)
+setInterval(async () => {
+    try {
+        const { shouldRestart } = require('./utils');
+        if (shouldRestart()) {
+            console.log("🔄 Auto-restart scheduled (every 6 hours)");
+            console.log("⏰ Restarting in 10 seconds...");
+            
+            setTimeout(() => {
+                console.log("🔄 Restarting now...");
+                process.exit(0);
+            }, 10000);
+        }
+    } catch (e) {}
+}, 30 * 60 * 1000); // প্রতি ৩০ মিনিটে চেক করবে
+
+// ✅ ৪. Cache Cleanup (প্রতি ২৪ ঘণ্টায়)
+setInterval(async () => {
+    try {
+        const { cleanOldData } = require('./utils');
+        const cleaned = cleanOldData();
+        console.log(`🧹 Cache cleanup: ${cleaned} old entries removed`);
+    } catch (e) {}
+}, 24 * 60 * 60 * 1000); // ২৪ ঘণ্টা
+
+// ✅ ৫. Daily Status Report (প্রতিদিন সকাল ৯টায়)
+setInterval(async () => {
+    try {
+        const { getHourDhaka, healthCheck } = require('./utils');
+        const hour = getHourDhaka();
+        
+        if (hour === 9) {
+            const health = healthCheck();
+            console.log(`📊 DAILY STATUS REPORT`);
+            console.log(`⏱️ Uptime: ${health.uptimeHuman}`);
+            console.log(`💾 Memory: ${health.memoryUsed}MB`);
+            console.log(`📡 Ping: ${health.avgPing}ms`);
+        }
+    } catch (e) {}
+}, 60 * 60 * 1000); // প্রতি ঘণ্টায় চেক
+
+// ==================== 🌐 HEALTH SERVER ====================
+
+
+
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end(`💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌 24/7\nUptime: ${Math.floor(process.uptime())}s`);
@@ -583,11 +672,6 @@ http.createServer((req, res) => {
     console.log(`🌐 Health server on port ${PORT}`);
 });
 
-// ==================== SELF-PING ====================
-const RENDER_URL = process.env.RENDER_URL || "https://destroy-k66o.onrender.com";
-setInterval(async () => {
-    try { await axios.get(RENDER_URL); } catch (e) {}
-}, 4 * 60 * 1000);
 
 // ==================== ERROR HANDLERS ====================
 process.on('uncaughtException', (err) => console.error("Uncaught:", err.message));

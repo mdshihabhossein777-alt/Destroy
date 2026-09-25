@@ -1,5 +1,8 @@
 const fs = require('fs');
-const { getDB, saveDB, timeFooter, hasPermission, permissionDenied, getUserRole, SLOW_MODE, sleep } = require('../utils');
+const { 
+    getDB, saveDB, timeFooter, hasPermission, permissionDenied, 
+    getUserRole, SLOW_MODE, sleep, healthCheck 
+} = require('../utils');
 
 module.exports = {
 
@@ -93,19 +96,28 @@ module.exports = {
     },
 
     // ==================== WARN ====================
+       // ==================== WARN ====================
     warn: async (api, event, args, config) => {
         if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
         const t = Object.keys(event.mentions || {})[0];
         if (!t) return api.sendMessage("ᴜꜱᴀɢᴇ: /warn @ᴜꜱᴇʀ" + timeFooter(), event.threadID);
+        
         const db = getDB();
         if (!db.warnings[event.threadID]) db.warnings[event.threadID] = {};
         db.warnings[event.threadID][t] = (db.warnings[event.threadID][t] || 0) + 1;
         const count = db.warnings[event.threadID][t];
         saveDB(db);
+        
         api.sendMessage(`⚠️ ᴡᴀʀɴɪɴɢ ɪꜱꜱᴜᴇᴅ\nᴛᴏᴛᴀʟ: ${count}/3${timeFooter()}`, event.threadID);
-        if (count >= 3) {
+        
+        // ✅ warnKill active থাকলে 3 warn = kick
+        const warnKillActive = db.security[event.threadID]?.warnKill === true;
+        if (warnKillActive && count >= 3) {
             api.removeUserFromGroup(t, event.threadID, () => {
-                api.sendMessage(`🚫 ᴋɪᴄᴋᴇᴅ (3 ᴡᴀʀɴɪɴɢꜱ)${timeFooter()}`, event.threadID);
+                api.sendMessage(
+                    `💀 ᴡᴀʀɴ ᴋɪʟʟ ᴀᴄᴛɪᴠᴀᴛᴇᴅ\n🚫 ᴜꜱᴇʀ ᴋɪᴄᴋᴇᴅ (3 ᴡᴀʀɴɪɴɢꜱ)${timeFooter()}`,
+                    event.threadID
+                );
             });
         }
     },
@@ -315,6 +327,36 @@ module.exports = {
         db.groups[event.threadID].slowMode = sec;
         saveDB(db);
         api.sendMessage(`🐌 ꜱʟᴏᴡᴍᴏᴅᴇ: ${sec}ꜱ${timeFooter()}`, event.threadID);
+    },
+
+    // ==================== HEALTH CHECK ====================
+    health: async (api, event, args, config) => {
+        if (!(await hasPermission(api, event, config, "botadmin"))) return permissionDenied(api, event, "botadmin");
+
+        const health = healthCheck();
+        const dayNight = health.isDay ? "☀️ Day" : "🌙 Night";
+
+        const msg = `💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐇𝐄𝐀𝐋𝐓𝐇
+━━━━━━━━━━━━━━━━━━━━━━━━
+🟢 ꜱᴛᴀᴛᴜꜱ: ${health.status.toUpperCase()}
+⏱️ ᴜᴘᴛɪᴍᴇ: ${health.uptimeHuman}
+💾 ᴍᴇᴍᴏʀʏ: ${health.memoryUsed}MB / ${health.memoryTotal}MB
+📡 ᴀᴠɢ ᴘɪɴɢ: ${health.avgPing}ms
+🕐 ᴛɪᴍᴇ: ${health.time}
+${dayNight}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
+
+        api.sendMessage(msg, event.threadID);
+    },
+
+    // ==================== UPTIME ====================
+    uptime: async (api, event, args, config) => {
+        const health = healthCheck();
+        api.sendMessage(
+            `⏱️ ᴜᴘᴛɪᴍᴇ: ${health.uptimeHuman}\n🕐 ᴛɪᴍᴇ: ${health.time}${timeFooter()}`,
+            event.threadID
+        );
     }
 
 };
