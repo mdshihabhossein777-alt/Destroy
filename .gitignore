@@ -1,11 +1,9 @@
 node_modules/
 appstate.json
-fb_dtsg_data.json
-fca-config.json
-Fca_Database/
-*.sqlite
-*.sqlite3
 .env
 *.log
 .DS_Store
 .vscode/
+Fca_Database/
+*.sqlite
+*.sqlite3
