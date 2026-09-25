@@ -298,23 +298,135 @@ function guessGender(name) {
 }
 
 // ==================== 🐌 Slow Mode ====================
+// ==================== 🐌 REAL HUMAN SLOW MODE ====================
 const SLOW_MODE = {
-    commandDelay: 1500,
-    responseDelay: 800,
-    notificationDelay: 5000,
-    groupCommandGap: 2000,
+    // ✅ কমান্ড প্রসেসিং (মানুষ যা করে)
+    minCommandDelay: 1500,      // সর্বনিম্ন ১.৫ সেকেন্ড
+    maxCommandDelay: 3500,      // সর্বোচ্চ ৩.৫ সেকেন্ড
+    
+    // ✅ রেসপন্স পাঠানো
+    minResponseDelay: 800,      // ০.৮ সেকেন্ড
+    maxResponseDelay: 2000,     // ২ সেকেন্ড
+    
+    // ✅ Typing Indicator (টাইপিং দেখানোর সময়)
+    minTypingDelay: 800,
+    maxTypingDelay: 1800,
+    
+    // ✅ একই গ্রুপে দুই কমান্ডের মাঝে বিরতি
+    groupCommandGap: 3000,      // ৩ সেকেন্ড
+    
+    // ✅ নোটিফিকেশন পাঠানোর সময় (অনেক গ্রুপে স্প্যাম এড়াতে)
+    notificationDelay: 8000,    // ৮ সেকেন্ড
+    
+    // ✅ বট স্ক্যান
     botScanDelay: 3000,
-    massActionDelay: 1000,
-    broadcastDelay: 5000,
-    typingDelay: 1000,
+    
+    // ✅ Mass Action (massnick, masskick)
+    massActionDelay: 1500,
+    
+    // ✅ Broadcast
+    broadcastDelay: 8000,       // ৮ সেকেন্ড
+    
+    // ✅ AFK
     afkDelay: 500
 };
+
+// ==================== 🎲 Random Delay Generator ====================
+// মানুষের মতো র‍্যান্ডম সময় দেয়
+function getRandomDelay(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// ==================== 🐌 Sleep Function ====================
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ==================== 🎭 Human Typing Simulator ====================
+// মানুষের মতো টাইপ করে - ধীরে ধীরে শব্দ টাইপ করে
+async function simulateHumanTyping(api, threadID, text) {
+    try {
+        // Typing indicator দেখানোর জন্য
+        api.sendTypingIndicator(threadID, () => {});
+        
+        // টেক্সট এর দৈর্ঘ্য অনুযায়ী delay
+        const textLength = text.length;
+        let typingTime = 0;
+        
+        if (textLength < 20) {
+            typingTime = getRandomDelay(800, 1500);      // ছোট টেক্সট
+        } else if (textLength < 50) {
+            typingTime = getRandomDelay(1500, 2500);     // মাঝারি টেক্সট
+        } else if (textLength < 100) {
+            typingTime = getRandomDelay(2000, 3500);     // বড় টেক্সট
+        } else {
+            typingTime = getRandomDelay(3000, 5000);     // অনেক বড় টেক্সট
+        }
+        
+        await sleep(typingTime);
+        return typingTime;
+    } catch (e) {
+        return 1000;
+    }
+}
+
+// ==================== 🎯 Advanced Command Delay ====================
+// কমান্ড অনুযায়ী আলাদা সময়
+async function getCommandDelay(commandName) {
+    // ভারী কমান্ডে বেশি সময়
+    const heavyCommands = ["massnick", "masskick", "nuke", "broadcast", "groupreset", "cleanadmin"];
+    const lightCommands = ["ping", "help", "uid", "time"];
+    
+    if (heavyCommands.includes(commandName)) {
+        return getRandomDelay(2500, 4500);   // ভারী: ২.৫-৪.৫ সেকেন্ড
+    } else if (lightCommands.includes(commandName)) {
+        return getRandomDelay(800, 1800);    // হালকা: ০.৮-১.৮ সেকেন্ড
+    } else {
+        return getRandomDelay(1500, 3000);   // সাধারণ: ১.৫-৩ সেকেন্ড
+    }
+}
+
+// ==================== 🚫 Group Command Throttle ====================
+const groupCommandTracker = {};
+const groupMessageCount = {};
+
+function isGroupThrottled(threadID) {
+    const now = Date.now();
+    const last = groupCommandTracker[threadID];
+    if (last && now - last < SLOW_MODE.groupCommandGap) return true;
+    groupCommandTracker[threadID] = now;
+    return false;
+}
+
+// ==================== 📊 Anti-Spam Protection ====================
+function checkSpam(threadID) {
+    const now = Date.now();
+    const windowSize = 60000; // ১ মিনিট
+    
+    if (!groupMessageCount[threadID]) {
+        groupMessageCount[threadID] = [];
+    }
+    
+    // ১ মিনিটের পুরনো ডেটা মুছুন
+    groupMessageCount[threadID] = groupMessageCount[threadID].filter(
+        timestamp => now - timestamp < windowSize
+    );
+    
+    // নতুন মেসেজ যোগ করুন
+    groupMessageCount[threadID].push(now);
+    
+    // ১ মিনিটে ২০টির বেশি মেসেজ = স্প্যাম সতর্কতা
+    if (groupMessageCount[threadID].length > 20) {
+        return true; // Spam detected
+    }
+    return false;
+}
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const groupCommandTracker = {};
+//const groupCommandTracker = {};
 
 function isGroupThrottled(threadID) {
     const now = Date.now();
@@ -431,5 +543,10 @@ module.exports = {
     guessGender,
     SLOW_MODE, sleep, isGroupThrottled,
     healthCheck, cleanOldData,
-    generateWelcomeCard, checkPrefix
+    generateWelcomeCard, checkPrefix,
+    // ✅ নতুন যোগ করুন
+    getRandomDelay,
+    simulateHumanTyping,
+    getCommandDelay,
+    checkSpam
 };

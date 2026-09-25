@@ -4,7 +4,6 @@ const axios = require('axios');
 const http = require('http');
 const login = require('@dongdev/fca-unofficial');
 const config = require('./config.json');
-// SAYONARA SYSTEM - Update 2.1 (Real-Time Guardian Active)
 
 // ==================== 🔧 Utils Import ====================
 const { 
@@ -13,7 +12,8 @@ const {
     SLOW_MODE, sleep, isGroupThrottled, isBot, sendAdvancedGif, 
     generateWelcomeCard, checkPrefix,
     getOwnerList, getAdminList,
-    healthCheck, cleanOldData
+    healthCheck, cleanOldData,
+    getRandomDelay, getCommandDelay, checkSpam
 } = require('./utils');
 
 // ==================== 🔑 AppState Load ====================
@@ -100,6 +100,7 @@ login({ appState }, (err, api) => {
 💰 ᴇᴄᴏɴᴏᴍʏ + ɢᴀᴍᴇꜱ
 🔒 ɢʀᴏᴜᴘ ʟᴏᴄᴋ ꜱʏꜱᴛᴇᴍ
 🤖 ᴀɴᴛɪ-ʙᴏᴛ ᴅᴇᴛᴇᴄᴛɪᴏɴ
+🛡️ ʀᴇᴀʟ-ᴛɪᴍᴇ ɢᴜᴀʀᴅɪᴀɴ
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
@@ -126,7 +127,7 @@ login({ appState }, (err, api) => {
 
                     await new Promise(r => api.sendMessage(updateMsg, gid, () => r()));
                     sent++;
-                    await sleep(SLOW_MODE.notificationDelay);
+                    await sleep(getRandomDelay(6000, 12000));
                 } catch (e) { failed++; }
             }
 
@@ -193,14 +194,6 @@ login({ appState }, (err, api) => {
             const isAdmin = isOwner || isBotAdmin || isGroupAdmin;
 
             // ==================== 💬 MESSAGE PROCESSING ====================
-// ==================== 🛡️ REAL-TIME GUARDIAN CHECK ====================
-if (event.type === "message" && event.body) {
-    const { guardian } = require('./commands/guardian');
-    const isViolation = await guardian(api, event, config);
-    if (isViolation) return; // লঙ্ঘন হলে পরের প্রসেসিং বন্ধ
-}
-
-
             if (event.type === "message" && event.body) {
                 const msg = event.body.trim();
 
@@ -283,21 +276,36 @@ if (event.type === "message" && event.body) {
                     const args = msg.slice(config.prefix.length).split(' ');
                     const cmd = args.shift().toLowerCase();
 
-                    if (isGroupThrottled(tid) && !isOwner) return;
+                    // Group Throttle
+                    if (isGroupThrottled(tid) && !isOwner) {
+                        return;
+                    }
 
                     if (commands[cmd]) {
                         console.log(`✅ Command: ${cmd} | Role: ${senderRole}`);
-                        await sleep(SLOW_MODE.typingDelay);
+                        
+                        // Anti-Spam Check
+                        const isSpam = checkSpam(tid);
+                        if (isSpam) {
+                            console.log(`⚠️ Spam detected in ${tid}, pausing...`);
+                            await sleep(10000);
+                        }
+                        
+                        // Typing Indicator
                         api.sendTypingIndicator(tid, () => {});
-                        setTimeout(() => {
-                            try {
-                                commands[cmd](api, event, args, config);
-                            } catch (e) {
-                                console.error(`❌ ${cmd} error:`, e.message);
-                            }
-                        }, SLOW_MODE.commandDelay);
+                        
+                        // Command Delay (Real Human)
+                        const commandDelay = await getCommandDelay(cmd);
+                        await sleep(commandDelay);
+                        
+                        // Run command
+                        try {
+                            commands[cmd](api, event, args, config);
+                        } catch (e) {
+                            console.error(`❌ ${cmd} error:`, e.message);
+                        }
                     } else {
-                        await sleep(SLOW_MODE.responseDelay);
+                        await sleep(getRandomDelay(800, 2000));
                         api.sendMessage(`❌ 𝐂ᴏᴍᴍᴀɴᴅ 𝐍ᴏᴛ 𝐅ᴏᴜɴᴅ: ${cmd}\n📖 ᴛʏᴘᴇ /help${timeFooter()}`, tid);
                     }
                 }
@@ -358,7 +366,7 @@ if (event.type === "message" && event.body) {
                                 mentions: [{ tag: name, id: p.userFbId }]
                             }, tid);
 
-                            await sleep(1500);
+                            await sleep(getRandomDelay(2000, 4000));
 
                             // Welcome Card
                             const cardBuffer = await generateWelcomeCard(name, avatarUrl, gname, mcount, addedBy, dateStr);
@@ -371,7 +379,7 @@ if (event.type === "message" && event.body) {
                                 await sendAdvancedGif(api, event, "🌸 𝐖ᴇʟᴄᴏᴍᴇ!", 'welcome');
                             }
 
-                            await sleep(2000);
+                            await sleep(getRandomDelay(2000, 4000));
                         }
                     } catch (e) {
                         console.error("Welcome error:", e.message);
