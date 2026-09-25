@@ -45,7 +45,7 @@ console.log(`📦 Total ${Object.keys(commands).length} commands loaded`);
 
 // ==================== Trackers ====================
 const lastMsg = {};
-const joinTracker = {}; // Anti-Raid এর জন্য
+const joinTracker = {};
 
 // ==================== Login ====================
 login({ appState }, (err, api) => {
@@ -55,42 +55,63 @@ login({ appState }, (err, api) => {
     api.setOptions({ listenEvents: true, selfListen: false });
     console.log(`💀 ${config.botName} is online`);
 
-    // ==================== 🔔 VERSION NOTIFICATION ====================
+    // ==================== 🔔 AUTO NOTIFICATION ====================
     setTimeout(async () => {
         try {
             const db = getDB();
             if (!db.settings) db.settings = {};
-            if (db.settings.lastNotifiedVersion === config.version) return;
 
             const dbGroups = Object.keys(db.groups || {});
             const configGroups = config.notifyGroups || [];
             const allGroups = [...new Set([...dbGroups, ...configGroups])];
 
+            console.log(`📋 Groups to notify: ${allGroups.length}`);
+
             if (allGroups.length === 0) {
-                console.log("⚠️ No groups to notify");
+                console.log("⚠️ No groups yet. Auto-track on message.");
                 return;
             }
 
-            const updateMsg = `🔔 ʙᴏᴛ ᴜᴘᴅᴀᴛᴇ
+            const currentVersion = config.version || "V1.1";
+            if (db.settings.lastNotifiedVersion === currentVersion) {
+                console.log(`✅ Version ${currentVersion} already notified`);
+                return;
+            }
+
+            const updateMsg = `🔔 ʙᴏᴛ ᴜᴘᴅᴀᴛᴇ ɴᴏᴛɪꜰɪᴄᴀᴛɪᴏɴ
 ━━━━━━━━━━━━━━━━━━━━━━━━
 💀 ${config.botName}
-📌 ᴘʀᴇᴠɪᴏᴜꜱ: ${config.previousVersion || "V1.0"}
-🚀 ᴄᴜʀʀᴇɴᴛ : ${config.version}
 ━━━━━━━━━━━━━━━━━━━━━━━━
-✨ ɴᴇᴡ ꜰᴇᴀᴛᴜʀᴇꜱ ᴀᴅᴅᴇᴅ
-📖 /help ᴛᴏ ꜱᴇᴇ ᴀʟʟ${timeFooter()}`;
+🆙 ᴠᴇʀꜱɪᴏɴ ᴜᴘᴅᴀᴛᴇ!
 
-            let sent = 0;
+📌 ᴘʀᴇᴠɪᴏᴜꜱ: ${config.previousVersion || "V1.0"}
+🚀 ᴄᴜʀʀᴇɴᴛ : ${currentVersion}
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ ɴᴇᴡ ꜰᴇᴀᴛᴜʀᴇꜱ ᴀᴅᴅᴇᴅ
+
+📖 /help ꜰᴏʀ ᴄᴏᴍᴍᴀɴᴅꜱ
+💬 "bot active" ᴛᴏ ᴛᴇꜱᴛ
+🛡️ /security on ꜰᴏʀ ꜰᴜʟʟ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 ${config.botName}
+👨‍💻 ᴅᴇᴠ: ${config.developer}
+━━━━━━━━━━━━━━━━━━━━━━━━${timeFooter()}`;
+
+            let sent = 0, failed = 0;
             for (const gid of allGroups) {
                 try {
                     await new Promise(r => api.sendMessage(updateMsg, gid, () => r()));
                     sent++;
-                    await new Promise(r => setTimeout(r, 2000));
-                } catch (e) {}
+                    await new Promise(r => setTimeout(r, 2500));
+                } catch (e) { failed++; }
             }
-            db.settings.lastNotifiedVersion = config.version;
+
+            db.settings.lastNotifiedVersion = currentVersion;
+            db.settings.lastNotifiedAt = Date.now();
             saveDB(db);
-            console.log(`🔔 Notified: ${sent}/${allGroups.length}`);
+            console.log(`🔔 Notified: ${sent} sent, ${failed} failed`);
         } catch (e) { console.error("Notify error:", e.message); }
     }, 15000);
 
@@ -103,7 +124,7 @@ login({ appState }, (err, api) => {
             const db = getDB();
             const tid = event.threadID;
 
-            // ==================== 📊 AUTO GROUP TRACKING ====================
+            // AUTO GROUP TRACKING
             if (tid && event.isGroup) {
                 if (!db.groups) db.groups = {};
                 if (!db.groups[tid]) {
@@ -114,14 +135,24 @@ login({ appState }, (err, api) => {
                     };
                     saveDB(db);
                     console.log(`📊 Group tracked: ${tid}`);
+                    try {
+                        const newConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+                        if (!newConfig.notifyGroups) newConfig.notifyGroups = [];
+                        if (!newConfig.notifyGroups.includes(tid)) {
+                            newConfig.notifyGroups.push(tid);
+                            fs.writeFileSync('./config.json', JSON.stringify(newConfig, null, 2));
+                        }
+                    } catch (e) {}
                 } else {
+                    if (event.threadName && !db.groups[tid].lockName) {
+                        db.groups[tid].name = event.threadName;
+                    }
                     db.groups[tid].lastSeen = Date.now();
-                    if (event.threadName) db.groups[tid].name = event.threadName;
                     saveDB(db);
                 }
             }
 
-            // ==================== 👤 USER ACTIVITY TRACKING ====================
+            // USER ACTIVITY
             if (event.senderID && event.type === "message") {
                 if (!db.users) db.users = {};
                 if (!db.users[event.senderID]) db.users[event.senderID] = { points: 0, lastActive: 0 };
@@ -130,7 +161,7 @@ login({ appState }, (err, api) => {
                 saveDB(db);
             }
 
-            // ==================== 🚫 BOT OFF CHECK ====================
+            // BOT OFF CHECK
             if (tid && db.security?.[tid]?.botOff && event.senderID !== config.owner) return;
 
             const sec = db.security?.[tid] || {};
@@ -139,55 +170,63 @@ login({ appState }, (err, api) => {
             const isOwner = senderRole === "owner";
             const isBotAdmin = senderRole === "botadmin";
             const isGroupAdmin = senderRole === "groupadmin";
-            const isMod = senderRole === "mod";
             const isAdmin = isOwner || isBotAdmin || isGroupAdmin;
 
-            // ==================== 🛡️ ANTI-RAID ====================
-            if (event.logMessageType === "log:subscribe" && sec.antiRaid) {
-                if (!joinTracker[tid]) joinTracker[tid] = [];
-                const now = Date.now();
-                joinTracker[tid] = joinTracker[tid].filter(t => now - t < 60000);
-                joinTracker[tid].push(now);
-
-                if (joinTracker[tid].length >= 5) {
-                    db.groups[tid] = db.groups[tid] || {};
-                    db.groups[tid].lockAll = true;
-                    saveDB(db);
-                    api.sendMessage(`🚨 ᴀɴᴛɪ-ʀᴀɪᴅ ᴛʀɪɢɢᴇʀᴇᴅ!\n⚠️ 5+ ᴊᴏɪɴꜱ ɪɴ 1 ᴍɪɴᴜᴛᴇ\n🔒 ɢʀᴏᴜᴘ ʟᴏᴄᴋᴇᴅ${timeFooter()}`, tid);
-                }
-            }
-
-            // ==================== 🔒 LOCK NAME ====================
+            // LOCK NAME
             if (event.logMessageType === "log:thread-name" && grp.lockName) {
-                if (!isAdmin) {
+                if (!isOwner && !isBotAdmin) {
+                    let savedName = db.groups[tid]?.lockedName || db.groups[tid]?.name;
+                    if (savedName) {
+                        try {
+                            await new Promise(r => api.setTitle(savedName, tid, () => r()));
+                            api.sendMessage(`🔒 ɢʀᴏᴜᴘ ɴᴀᴍᴇ ɪꜱ ʟᴏᴄᴋᴇᴅ!\n📌 ʀᴇꜱᴛᴏʀᴇᴅ: ${savedName}${timeFooter()}`, tid);
+                        } catch (e) {}
+                    }
+                } else {
                     try {
-                        await new Promise(r => api.setTitle(db.groups[tid]?.name || "Locked Group", tid, () => r()));
-                        api.sendMessage(`🔒 ɢʀᴏᴜᴘ ɴᴀᴍᴇ ɪꜱ ʟᴏᴄᴋᴇᴅ!\n⚠️ ${event.author} ᴛʀɪᴇᴅ ᴛᴏ ᴄʜᴀɴɢᴇ ɪᴛ${timeFooter()}`, tid);
+                        const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
+                        if (info?.threadName) {
+                            db.groups[tid].lockedName = info.threadName;
+                            db.groups[tid].name = info.threadName;
+                            saveDB(db);
+                        }
                     } catch (e) {}
                 }
             }
 
-            // ==================== 🔒 LOCK PHOTO ====================
+            // LOCK PHOTO
             if (event.logMessageType === "log:thread-icon" && grp.lockPhoto) {
-                if (!isAdmin) {
-                    api.sendMessage(`🔒 ɢʀᴏᴜᴘ ᴘʜᴏᴛᴏ ɪꜱ ʟᴏᴄᴋᴇᴅ!\n⚠️ ${event.author} ᴛʀɪᴇᴅ ᴛᴏ ᴄʜᴀɴɢᴇ ɪᴛ${timeFooter()}`, tid);
-                }
+                if (!isAdmin) api.sendMessage(`🔒 ɢʀᴏᴜᴘ ᴘʜᴏᴛᴏ ɪꜱ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
             }
 
-            // ==================== 🔒 LOCK NICK ====================
+            // LOCK NICK
             if (event.logMessageType === "log:user-nickname" && grp.lockNick) {
                 if (!isAdmin) {
                     const target = event.logMessageData?.participant_id;
                     if (target) {
                         try {
                             await new Promise(r => api.changeNickname("", tid, target, () => r()));
-                            api.sendMessage(`🔒 ɴɪᴄᴋɴᴀᴍᴇ ɪꜱ ʟᴏᴄᴋᴇᴅ!\n⚠️ ${event.author} ᴛʀɪᴇᴅ ᴛᴏ ᴄʜᴀɴɢᴇ ɪᴛ${timeFooter()}`, tid);
+                            api.sendMessage(`🔒 ɴɪᴄᴋɴᴀᴍᴇ ɪꜱ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
                         } catch (e) {}
                     }
                 }
             }
 
-            // ==================== 🎉 WELCOME EVENT ====================
+            // ANTI-RAID
+            if (event.logMessageType === "log:subscribe" && sec.antiRaid) {
+                if (!joinTracker[tid]) joinTracker[tid] = [];
+                const now = Date.now();
+                joinTracker[tid] = joinTracker[tid].filter(t => now - t < 60000);
+                joinTracker[tid].push(now);
+                if (joinTracker[tid].length >= 5) {
+                    db.groups[tid] = db.groups[tid] || {};
+                    db.groups[tid].lockAll = true;
+                    saveDB(db);
+                    api.sendMessage(`🚨 ᴀɴᴛɪ-ʀᴀɪᴅ ᴛʀɪɢɢᴇʀᴇᴅ!\n🔒 ɢʀᴏᴜᴘ ʟᴏᴄᴋᴇᴅ${timeFooter()}`, tid);
+                }
+            }
+
+            // WELCOME
             if (event.logMessageType === "log:subscribe") {
                 const added = event.logMessageData?.addedParticipants || [];
                 const botID = api.getCurrentUserID();
@@ -200,19 +239,16 @@ login({ appState }, (err, api) => {
                         const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
                         const gname = info?.threadName || "Group";
                         const mcount = info?.participantIDs?.length || 0;
-
                         for (const p of added) {
                             const name = p.fullName || "New Member";
-                            const customWelcome = db.groups[tid]?.welcome;
-                            const welcomeText = customWelcome || `🌸 ᴡᴇʟᴄᴏᴍᴇ ${name}!\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌹 ᴛᴏ ᴏᴜʀ ꜰᴀᴍɪʟʏ!\n⭐ ᴡᴇ'ʀᴇ ᴇxᴄɪᴛᴇᴅ!\n━━━━━━━━━━━━━━━━━━━━━━━━\n👥 ᴍᴇᴍʙᴇʀꜱ: ${mcount}\n📌 ɢʀᴏᴜᴘ: ${gname}`;
-
+                            const welcomeText = db.groups[tid]?.welcome || `🌸 ᴡᴇʟᴄᴏᴍᴇ ${name}!\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌹 ᴛᴏ ᴏᴜʀ ꜰᴀᴍɪʟʏ!\n👥 ᴍᴇᴍʙᴇʀꜱ: ${mcount}\n📌 ɢʀᴏᴜᴘ: ${gname}`;
                             await sendWithGif(api, event, welcomeText + timeFooter(), 'wave', [{ tag: name, id: p.userFbId }]);
                         }
                     } catch (e) {}
                 }
             }
 
-            // ==================== 👋 LEFT EVENT ====================
+            // LEFT
             if (event.logMessageType === "log:unsubscribe") {
                 const lid = event.logMessageData?.leftParticipantFbId;
                 if (lid && lid !== api.getCurrentUserID()) {
@@ -223,61 +259,44 @@ login({ appState }, (err, api) => {
                             if (e) return;
                             const name = ret[lid]?.name || "A member";
                             const mcount = info?.participantIDs?.length || 0;
-                            const customGoodbye = db.groups[tid]?.goodbye;
                             const msg = kicked
                                 ? `👢 ${name} ᴡᴀꜱ ᴋɪᴄᴋᴇᴅ\n👥 ʀᴇᴍᴀɪɴɪɴɢ: ${mcount}`
-                                : (customGoodbye || `🍂 ɢᴏᴏᴅʙʏᴇ ${name}\n💔 ᴡᴇ'ʟʟ ᴍɪꜱꜱ ʏᴏᴜ\n👥 ʀᴇᴍᴀɪɴɪɴɢ: ${mcount}`);
+                                : `🍂 ɢᴏᴏᴅʙʏᴇ ${name}\n👥 ʀᴇᴍᴀɪɴɪɴɢ: ${mcount}`;
                             await sendWithGif(api, event, msg + timeFooter(), 'wave');
                         });
                     } catch (e) {}
                 }
             }
 
-            // ==================== 💬 MESSAGE PROCESSING ====================
+            // MESSAGE PROCESSING
             if (event.type === "message" && event.body) {
                 const msg = event.body.trim();
 
-                // AFK check
                 if (db.afk?.[event.senderID]) {
-                    const afkData = db.afk[event.senderID];
                     delete db.afk[event.senderID];
                     saveDB(db);
-                    api.sendMessage(`✅ ᴡᴇʟᴄᴏᴍᴇ ʙᴀᴄᴋ! ʀᴇᴍᴏᴠᴇᴅ ꜰʀᴏᴍ AFK\n📝 ᴡᴀꜱ: ${afkData.reason}${timeFooter()}`, tid);
+                    api.sendMessage(`✅ ᴡᴇʟᴄᴏᴍᴇ ʙᴀᴄᴋ!${timeFooter()}`, tid);
                 }
 
-                // Owner bypass all filters
-                if (!isOwner) {
-
-                    // ==================== ANTI-LINK ====================
-                    if (grp.antiLink && /(https?:\/\/|www\.|\.com|\.net|\.org|\.xyz|\.live|\.me)/gi.test(event.body)) {
-                        if (!isAdmin) {
-                            api.unsendMessage(event.messageID);
-                            api.sendMessage(`🔗 ʟɪɴᴋꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!\n⚠️ ${event.body.slice(0, 30)}...${timeFooter()}`, tid);
-                            return;
-                        }
+                if (!isOwner && !isBotAdmin) {
+                    if (grp.antiLink && /(https?:\/\/|www\.|\.com|\.net)/gi.test(event.body) && !isAdmin) {
+                        api.unsendMessage(event.messageID);
+                        api.sendMessage(`🔗 ʟɪɴᴋꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
+                        return;
                     }
-
-                    // ==================== ANTI-GALI ====================
-                    if (grp.antiGali && /(madarchod|bhenchod|fuck|shit|bastard|harami|kutta|kutir|suorer|shala|shali|khanki|magi|choda|chod|bhosdi)/gi.test(event.body)) {
-                        if (!isAdmin) {
-                            api.unsendMessage(event.messageID);
-                            api.sendMessage(`🤬 ʙᴀᴅ ᴡᴏʀᴅꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
-                            return;
-                        }
+                    if (grp.antiGali && /(madarchod|bhenchod|fuck|shit|bastard|harami)/gi.test(event.body) && !isAdmin) {
+                        api.unsendMessage(event.messageID);
+                        api.sendMessage(`🤬 ʙᴀᴅ ᴡᴏʀᴅꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
+                        return;
                     }
-
-                    // ==================== ANTI-PHONE ====================
-                    if (grp.antiPhone && /(\+?880|01[3-9])\d{8,9}/g.test(event.body)) {
-                        if (!isAdmin) {
-                            api.unsendMessage(event.messageID);
-                            api.sendMessage(`📱 ᴘʜᴏɴᴇ ɴᴜᴍʙᴇʀꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
-                            return;
-                        }
+                    if (grp.antiPhone && /(\+?880|01[3-9])\d{8,9}/g.test(event.body) && !isAdmin) {
+                        api.unsendMessage(event.messageID);
+                        api.sendMessage(`📱 ᴘʜᴏɴᴇ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
+                        return;
                     }
                 }
 
-                // Anti-sticker/gif
-                if (event.attachments && event.attachments.length > 0 && !isOwner) {
+                if (event.attachments && event.attachments.length > 0 && !isOwner && !isBotAdmin) {
                     for (const att of event.attachments) {
                         if (grp.antiSticker && att.type === "sticker" && !isAdmin) {
                             api.unsendMessage(event.messageID);
@@ -290,21 +309,16 @@ login({ appState }, (err, api) => {
                     }
                 }
 
-                // ==================== ONLY ADMIN MODE ====================
                 if (sec.onlyAdmin && !isAdmin) {
-                    api.removeUserFromGroup(event.senderID, tid, (err) => {
-                        if (!err) api.sendMessage(`👑 ᴏɴʟʏ ᴀᴅᴍɪɴꜱ ᴄᴀɴ ᴄʜᴀᴛ\n👢 ᴜꜱᴇʀ ᴋɪᴄᴋᴇᴅ${timeFooter()}`, tid);
-                    });
+                    api.removeUserFromGroup(event.senderID, tid, () => {});
                     return;
                 }
 
-                // ==================== ALL MUTE ====================
                 if (sec.allMute && !isAdmin && !msg.startsWith(config.prefix)) {
                     api.unsendMessage(event.messageID);
                     return;
                 }
 
-                // ==================== SLOW MODE ====================
                 const slow = grp.slowMode || 0;
                 if (slow > 0 && !isAdmin) {
                     if (lastMsg[tid] && Date.now() - lastMsg[tid] < slow * 1000) {
@@ -314,32 +328,23 @@ login({ appState }, (err, api) => {
                     lastMsg[tid] = Date.now();
                 }
 
-                // ==================== ANTI-BOT ====================
-                if (sec.antiBot && !isOwner) {
-                    const botKeywords = /(bot|Bot|BOT|auto|Auto)/;
-                    if (botKeywords.test(event.body) && event.body.length < 20) {
-                        // Check if another bot
-                    }
-                }
-
-                // ==================== BOT ACTIVE ====================
                 if (msg.toLowerCase() === "bot active" || msg.toLowerCase() === "bot") {
-                    return api.sendMessage(`💀 ${config.botName} ɪꜱ ᴀᴄᴛɪᴠᴇ ✅\n🛡️ ꜱᴇᴄᴜʀɪᴛʏ: ${Object.keys(sec).filter(k => sec[k]).length} ᴀᴄᴛɪᴠᴇ${timeFooter()}`, tid);
+                    const secCount = Object.keys(sec).filter(k => sec[k] === true).length;
+                    return api.sendMessage(`💀 ${config.botName} ɪꜱ ᴀᴄᴛɪᴠᴇ ✅\n🛡️ ꜱᴇᴄᴜʀɪᴛʏ: ${secCount} ᴀᴄᴛɪᴠᴇ${timeFooter()}`, tid);
                 }
 
-                // ==================== COMMAND PROCESSING ====================
                 if (msg.startsWith(config.prefix)) {
                     const args = msg.slice(config.prefix.length).split(' ');
                     const cmd = args.shift().toLowerCase();
 
                     if (commands[cmd]) {
-                        console.log(`✅ Command: ${cmd} | User: ${event.senderID} | Role: ${senderRole}`);
+                        console.log(`✅ Command: ${cmd}`);
                         api.sendTypingIndicator(tid, () => {});
                         setTimeout(() => {
                             try {
                                 commands[cmd](api, event, args, config);
                             } catch (e) {
-                                console.error(`❌ ${cmd} error:`, e.message);
+                                console.error(`❌ ${cmd}:`, e.message);
                             }
                         }, 800);
                     } else {
@@ -354,7 +359,7 @@ login({ appState }, (err, api) => {
     });
 });
 
-// ==================== ⏰ AUTO-KICK (7 days inactive) ====================
+// ==================== ⏰ AUTO-KICK ====================
 setInterval(async () => {
     try {
         if (!global.globalBotApi) return;
@@ -375,9 +380,7 @@ setInterval(async () => {
                     const u = db.users?.[mid];
                     if (!u || !u.lastActive) continue;
                     if (now - u.lastActive > SEVEN_DAYS) {
-                        global.globalBotApi.removeUserFromGroup(mid, tid, () => {
-                            console.log(`[Auto-Kick] ${mid} from ${tid}`);
-                        });
+                        global.globalBotApi.removeUserFromGroup(mid, tid, () => {});
                     }
                 }
             });
