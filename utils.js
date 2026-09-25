@@ -1,83 +1,130 @@
 const fs = require('fs');
 const axios = require('axios');
 const dbFile = './database.json';
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
 
-// ==================== Database ====================
+// ==================== 🗄️ Database ====================
 function getDB() {
     try {
         return JSON.parse(fs.readFileSync(dbFile, 'utf8'));
     } catch (e) {
-        return { groups: {}, users: {}, roles: {}, warnings: {}, blacklist: {}, security: {}, afk: {}, settings: {} };
+        return { groups: {}, users: {}, roles: {}, vips: {}, brothers: {}, army: {}, warnings: {}, blacklist: {}, security: {}, afk: {}, botDetection: {}, settings: {} };
     }
 }
 function saveDB(data) {
     fs.writeFileSync(dbFile, JSON.stringify(data, null, 2));
 }
 
-// ==================== Time Footer ====================
+// ==================== 🕐 Real-Time Dhaka Clock ====================
 function timeFooter() {
     const now = new Date();
-    const options = { timeZone: 'Asia/Dhaka', day: '2-digit', month: 'short', year: 'numeric' };
-    const timeOpt = { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: true };
-    const date = now.toLocaleDateString('en-GB', options);
-    const time = now.toLocaleTimeString('en-US', timeOpt);
-    return `\n\nᴛɪᴍᴇ: ${date} | ${time}\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌\nᴅʜᴀᴋᴀ, ʙᴅ`;
+    const options = { 
+        timeZone: 'Asia/Dhaka',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    };
+    const timeStr = now.toLocaleString('en-GB', options);
+    const parts = timeStr.split(', ');
+    const datePart = parts[0];
+    const timePart = parts[1];
+    
+    return `\n\n🌸 ━━━━━━━━━━━━━━━━━━━━━ 🌸
+⏰ ${datePart} | ${timePart}
+🗾 ᴅʜᴀᴋᴀ, ʙᴀɴɢʟᴀᴅᴇꜱʜ
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ
+🌸 ━━━━━━━━━━━━━━━━━━━━━ 🌸`;
+}
+
+function getDhakaTime() {
+    const now = new Date();
+    return now.toLocaleString('en-GB', {
+        timeZone: 'Asia/Dhaka',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    });
+}
+
+function getHourDhaka() {
+    const now = new Date();
+    const dhakaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+    return dhakaTime.getHours();
+}
+
+function isDayTime() {
+    const hour = getHourDhaka();
+    return hour >= 6 && hour < 20;
 }
 
 // ==================== 👑 Role System ====================
 const ROLE_LEVELS = {
     "public": 0,
-    "mod": 1,
-    "groupadmin": 2,
-    "botadmin": 3,
-    "owner": 4
+    "member": 1,
+    "army": 2,
+    "brother": 3,
+    "vip": 4,
+    "groupadmin": 5,
+    "botadmin": 6,
+    "owner": 7
 };
 
-// ✅ Owner List বের করা (String বা Array — দুইটাই সাপোর্ট)
 function getOwnerList(config) {
     if (!config.owner) return [];
-    if (Array.isArray(config.owner)) return config.owner.map(id => String(id).trim()).filter(id => id);
-    if (typeof config.owner === "string") return config.owner.split(",").map(id => id.trim()).filter(id => id);
+    if (Array.isArray(config.owner)) {
+        return config.owner.map(id => String(id).trim()).filter(id => id);
+    }
+    if (typeof config.owner === "string") {
+        return config.owner.split(",").map(id => id.trim()).filter(id => id);
+    }
     return [];
 }
 
-// ✅ Admin List বের করা
 function getAdminList(config) {
     if (!config.botAdmins) return [];
-    if (Array.isArray(config.botAdmins)) return config.botAdmins.map(id => String(id).trim()).filter(id => id);
-    if (typeof config.botAdmins === "string") return config.botAdmins.split(",").map(id => id.trim()).filter(id => id);
+    if (Array.isArray(config.botAdmins)) {
+        return config.botAdmins.map(id => String(id).trim()).filter(id => id);
+    }
+    if (typeof config.botAdmins === "string") {
+        return config.botAdmins.split(",").map(id => id.trim()).filter(id => id);
+    }
     return [];
 }
 
-// ✅ ইউজারের রোল বের করা
 async function getUserRole(api, event, config) {
-    const senderID = event.senderID;
+    const senderID = String(event.senderID).trim();
     const threadID = event.threadID;
     const db = getDB();
 
-    // Owner Check
     const ownerList = getOwnerList(config);
     if (ownerList.includes(senderID)) return "owner";
 
-    // Bot Admin Check
     const adminList = getAdminList(config);
     if (adminList.includes(senderID)) return "botadmin";
 
-    // Custom Role Check
+    try {
+        const info = await new Promise(r => api.getThreadInfo(threadID, (e, i) => r(e ? null : i)));
+        if (info && info.adminIDs && info.adminIDs.some(a => String(a.id).trim() === senderID)) {
+            return "groupadmin";
+        }
+    } catch (e) {}
+
+    if (db.vips[threadID] && db.vips[threadID].includes(senderID)) return "vip";
+    if (db.brothers[threadID] && db.brothers[threadID].includes(senderID)) return "brother";
+    if (db.army[threadID] && db.army[threadID].includes(senderID)) return "army";
+
     if (db.roles[threadID] && db.roles[threadID][senderID]) {
         return db.roles[threadID][senderID];
     }
 
-    // Group Admin Check
-    try {
-        const info = await new Promise(r => api.getThreadInfo(threadID, (e, i) => r(e ? null : i)));
-        if (info && info.adminIDs && info.adminIDs.some(a => a.id === senderID)) {
-            return "groupadmin";
-        }
-    } catch (e) {}
-    
-    return "public";
+    return "member";
 }
 
 async function hasPermission(api, event, config, requiredRole) {
@@ -88,16 +135,72 @@ async function hasPermission(api, event, config, requiredRole) {
 }
 
 function permissionDenied(api, event, requiredRole) {
+    const roleEmojis = {
+        "owner": "👑",
+        "botadmin": "🛡️",
+        "groupadmin": "⚔️",
+        "vip": "💎",
+        "brother": "🤝",
+        "army": "🎖️"
+    };
+    const emoji = roleEmojis[requiredRole] || "🔒";
+    
     api.sendMessage(
-        `🚫 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ᴀᴄᴄᴇꜱꜱ ᴅᴇɴɪᴇᴅ
-━━━━━━━━━━━━━━━━━━━━━━━━
-ʀᴇQᴜɪʀᴇᴅ : ${requiredRole.toUpperCase()}
-ʏᴏᴜʀ ʀᴏʟᴇ: ᴜꜱᴇʀ
-━━━━━━━━━━━━━━━━━━━━━━━━${timeFooter()}`,
+        `🌸 ━━━━━━━━━━━━━━━━━━━━━ 🌸
+       ⛔ 𝐀ᴄᴄᴇꜱꜱ 𝐃ᴇɴɪᴇᴅ
+🌸 ━━━━━━━━━━━━━━━━━━━━━ 🌸
+
+${emoji} 𝐑ᴇQᴜɪʀᴇᴅ: ${requiredRole.toUpperCase()}
+👤 𝐘ᴏᴜʀ 𝐑ᴏʟᴇ: ᴜꜱᴇʀ
+
+🌸 ━━━━━━━━━━━━━━━━━━━━━ 🌸
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`,
         event.threadID
     );
 }
-// ==================== Anime GIF ====================
+
+// ==================== 🤖 Real-Time Bot Detection ====================
+const BOT_KEYWORDS = [
+    "bot", "Bot", "BOT", "auto", "Auto", "AUTO",
+    "system", "System", "helper", "Helper",
+    "assistant", "Assistant", "AI", "ai"
+];
+
+function isBot(userName) {
+    if (!userName) return false;
+    const lower = userName.toLowerCase();
+    return BOT_KEYWORDS.some(kw => lower.includes(kw.toLowerCase()));
+}
+
+async function scanBots(api, threadID) {
+    try {
+        const info = await new Promise(r => api.getThreadInfo(threadID, (e, i) => r(e ? null : i)));
+        if (!info) return [];
+
+        const botID = api.getCurrentUserID();
+        const bots = [];
+
+        for (const memberID of info.participantIDs) {
+            if (memberID === botID) continue;
+            try {
+                const user = await new Promise(r => api.getUserInfo(memberID, (e, ret) => r(e ? null : ret[memberID])));
+                if (user && isBot(user.name)) {
+                    bots.push({
+                        id: memberID,
+                        name: user.name,
+                        detectedAt: Date.now()
+                    });
+                }
+                await sleep(200);
+            } catch (e) {}
+        }
+        return bots;
+    } catch (e) {
+        return [];
+    }
+}
+
+// ==================== 🎬 Anime GIF Library ====================
 const WAIFU_API = "https://api.waifu.pics/sfw";
 
 async function fetchAnimeGif(category) {
@@ -126,19 +229,27 @@ async function sendWithGif(api, event, body, gifKey, mentions = []) {
     }
 }
 
-// ==================== Advanced GIF Library ====================
-const ADVANCED_GIFS = {
+// ==================== 🌸 Itachi/Sakura Anime GIFs ====================
+const ANIME_GIFS = {
     itachi: [
         "https://media.tenor.com/x8v1oNUOmg4AAAAC/itachi-naruto.gif",
-        "https://media.tenor.com/VlYdVjwfWQ8AAAAC/itachi-sharingan.gif"
+        "https://media.tenor.com/VlYdVjwfWQ8AAAAC/itachi-sharingan.gif",
+        "https://media.tenor.com/6n6sJZ2o3WAAAAAC/itachi-uchiha.gif"
     ],
-    sayonara: [
-        "https://media.tenor.com/8W3qY2zfX0AAAAAC/anime-goodbye.gif",
-        "https://media.tenor.com/2Z4vX3WfY0AAAAAC/sad-goodbye-anime.gif"
+    sasuke: [
+        "https://media.tenor.com/3o7btPCcdNniyf0ArS/giphy.gif",
+        "https://media.tenor.com/l0HlvtIPzPdt2usKs/giphy.gif"
+    ],
+    sakura: [
+        "https://media.tenor.com/l2QDM9Jnim1YVILXa/giphy.gif"
     ],
     welcome: [
         "https://media.tenor.com/9W3qZfY3XwAAAAAC/anime-welcome.gif",
         "https://media.tenor.com/5K2zXfV3W0AAAAAC/welcome-anime.gif"
+    ],
+    sayonara: [
+        "https://media.tenor.com/8W3qY2zfX0AAAAAC/anime-goodbye.gif",
+        "https://media.tenor.com/2Z4vX3WfY0AAAAAC/sad-goodbye-anime.gif"
     ],
     love: [
         "https://media.tenor.com/XkZ3qWfN7B0AAAAC/anime-love-couple.gif"
@@ -146,7 +257,7 @@ const ADVANCED_GIFS = {
 };
 
 async function fetchAdvancedGif(key) {
-    const urls = ADVANCED_GIFS[key] || ADVANCED_GIFS.itachi;
+    const urls = ANIME_GIFS[key] || ANIME_GIFS.itachi;
     return urls[Math.floor(Math.random() * urls.length)];
 }
 
@@ -160,7 +271,7 @@ async function sendAdvancedGif(api, event, body, gifKey, mentions = []) {
     }
 }
 
-// ==================== Gender Detection ====================
+// ==================== 👤 Gender Detection ====================
 function guessGender(name) {
     if (!name) return null;
     const lower = name.toLowerCase().trim();
@@ -186,15 +297,7 @@ function guessGender(name) {
     return null;
 }
 
-// ==================== Bot Detection ====================
-const BOT_KEYWORDS = ["bot", "Bot", "BOT", "auto", "Auto", "AUTO", "system", "System", "helper", "Helper"];
-
-function isBot(userName) {
-    if (!userName) return false;
-    return BOT_KEYWORDS.some(kw => userName.toLowerCase().includes(kw.toLowerCase()));
-}
-
-// ==================== Slow Mode ====================
+// ==================== 🐌 Slow Mode ====================
 const SLOW_MODE = {
     commandDelay: 1500,
     responseDelay: 800,
@@ -221,154 +324,23 @@ function isGroupThrottled(threadID) {
     return false;
 }
 
-async function generateWelcomeCard(userName, userAvatar, groupName, memberCount, addedBy, dateStr) {
-    try {
-        const canvas = createCanvas(700, 300);
-        const ctx = canvas.getContext('2d');
-
-        // Background
-        const gradient = ctx.createLinearGradient(0, 0, 700, 300);
-        gradient.addColorStop(0, '#1a1a2e');
-        gradient.addColorStop(1, '#16213e');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 700, 300);
-
-        // Dark overlay
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(0, 0, 700, 300);
-
-        // Border
-        ctx.strokeStyle = '#ffd700';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(10, 10, 680, 280);
-
-        // Avatar
-        if (userAvatar) {
-            try {
-                const avatarImg = await loadImage(userAvatar);
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(120, 180, 70, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.clip();
-                ctx.drawImage(avatarImg, 50, 110, 140, 140);
-                ctx.restore();
-
-                // Avatar border
-                ctx.beginPath();
-                ctx.arc(120, 180, 70, 0, Math.PI * 2);
-                ctx.strokeStyle = '#ffd700';
-                ctx.lineWidth = 4;
-                ctx.stroke();
-            } catch (e) {
-                console.log("Avatar failed:", e.message);
-            }
-        }
-
-        // WELCOME text
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 45px Georgia';
-        ctx.textAlign = 'center';
-        ctx.fillText('Welcome', 400, 110);
-
-        // User name
-        ctx.font = 'bold 32px Arial';
-        ctx.fillStyle = '#ffd700';
-        const shortName = userName.length > 25 ? userName.slice(0, 22) + '...' : userName;
-        ctx.fillText(shortName, 400, 160);
-
-        // Group name
-        ctx.font = '20px Arial';
-        ctx.fillStyle = '#ffffff';
-        const shortGroup = groupName.length > 30 ? groupName.slice(0, 27) + '...' : groupName;
-        ctx.fillText(shortGroup, 400, 200);
-
-        // Member count
-        ctx.font = '16px Arial';
-        ctx.fillStyle = '#b0b0b0';
-        ctx.fillText(`You're the ${memberCount}th member`, 400, 230);
-
-        // Added by
-        ctx.font = '14px Arial';
-        ctx.fillStyle = '#a0a0a0';
-        ctx.fillText(`Added by: ${addedBy}`, 400, 255);
-
-        // Branding
-        ctx.font = 'bold 14px Arial';
-        ctx.fillStyle = '#00d4ff';
-        ctx.fillText('💀 SAYONARA SYSTEM 💀', 400, 285);
-
-        return canvas.toBuffer('image/png');
-    } catch (e) {
-        console.error("Card generation error:", e.message);
-        return null;
-    }
-}
-
-// ==================== ⏰ TIME SYSTEM ====================
-
-// ঢাকার সঠিক সময়
-function getDhakaTime() {
-    const now = new Date();
-    const options = { 
-        timeZone: 'Asia/Dhaka',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true
+// ==================== 📊 Health Check ====================
+function healthCheck() {
+    const mem = process.memoryUsage();
+    const uptime = process.uptime();
+    return {
+        status: "healthy",
+        uptime: Math.floor(uptime),
+        uptimeHuman: `${Math.floor(uptime / 3600)}ʜ ${Math.floor((uptime % 3600) / 60)}ᴍ`,
+        memoryUsed: Math.round(mem.heapUsed / 1024 / 1024),
+        memoryTotal: Math.round(mem.heapTotal / 1024 / 1024),
+        avgPing: 0,
+        time: getDhakaTime(),
+        isDay: isDayTime()
     };
-    return now.toLocaleString('en-GB', options);
 }
 
-// সময় থেকে ঘণ্টা বের করা
-function getHourDhaka() {
-    const now = new Date();
-    const dhakaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
-    return dhakaTime.getHours();
-}
-
-// এখন দিন না রাত
-function isDayTime() {
-    const hour = getHourDhaka();
-    return hour >= 6 && hour < 20;
-}
-
-// Auto-Restart সিস্টেম
-let lastRestart = Date.now();
-const RESTART_INTERVAL = 6 * 60 * 60 * 1000; // ৬ ঘণ্টা
-
-function shouldRestart() {
-    if (Date.now() - lastRestart > RESTART_INTERVAL) {
-        lastRestart = Date.now();
-        return true;
-    }
-    return false;
-}
-
-// Keep-Alive পিং হিস্টোরি
-const pingHistory = [];
-const MAX_PING_HISTORY = 20;
-
-function addPingHistory(responseTime) {
-    pingHistory.push({
-        time: Date.now(),
-        responseTime
-    });
-    if (pingHistory.length > MAX_PING_HISTORY) {
-        pingHistory.shift();
-    }
-}
-
-function getAvgPing() {
-    if (pingHistory.length === 0) return 0;
-    const sum = pingHistory.reduce((a, b) => a + b.responseTime, 0);
-    return Math.round(sum / pingHistory.length);
-}
-
-// Cache Cleanup সিস্টেম
+// ==================== 🧹 Cache Cleanup ====================
 function cleanOldData() {
     try {
         const db = getDB();
@@ -376,33 +348,10 @@ function cleanOldData() {
         const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
         let cleaned = 0;
 
-        // পুরনো AFK ডিলিট
         if (db.afk) {
             for (const uid in db.afk) {
                 if (now - (db.afk[uid].time || 0) > SEVEN_DAYS) {
                     delete db.afk[uid];
-                    cleaned++;
-                }
-            }
-        }
-
-        // পুরনো ওয়ার্নিং ডিলিট
-        if (db.warnings) {
-            for (const tid in db.warnings) {
-                for (const uid in db.warnings[tid]) {
-                    if (db.warnings[tid][uid] === 0) {
-                        delete db.warnings[tid][uid];
-                        cleaned++;
-                    }
-                }
-            }
-        }
-
-        // খালি গ্রুপ ডিলিট
-        if (db.groups) {
-            for (const tid in db.groups) {
-                if (!db.groups[tid].lastSeen || now - db.groups[tid].lastSeen > 30 * 24 * 60 * 60 * 1000) {
-                    delete db.groups[tid];
                     cleaned++;
                 }
             }
@@ -415,46 +364,54 @@ function cleanOldData() {
     }
 }
 
-// System Health Check
-function healthCheck() {
-    const mem = process.memoryUsage();
-    const uptime = process.uptime();
-
-    return {
-        status: "healthy",
-        uptime: Math.floor(uptime),
-        uptimeHuman: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
-        memoryUsed: Math.round(mem.heapUsed / 1024 / 1024),
-        memoryTotal: Math.round(mem.heapTotal / 1024 / 1024),
-        avgPing: getAvgPing(),
-        time: getDhakaTime(),
-        isDay: isDayTime()
-    };
+// ==================== 🎨 Welcome Card ====================
+async function generateWelcomeCard(userName, userAvatar, groupName, memberCount, addedBy, dateStr) {
+    try {
+        const apiUrl = `https://api.popcat.xyz/welcomecard?background=https://i.imgur.com/9YdvXbP.png&text1=${encodeURIComponent(userName)}&text2=${encodeURIComponent('Welcome to ' + groupName.slice(0, 25))}&text3=${encodeURIComponent("You're #" + memberCount + " member")}&avatar=${encodeURIComponent(userAvatar)}`;
+        
+        const response = await axios.get(apiUrl, { 
+            responseType: 'arraybuffer', 
+            timeout: 15000 
+        });
+        
+        if (response.data && response.data.byteLength > 500) {
+            return Buffer.from(response.data);
+        }
+        return null;
+    } catch (e) {
+        console.error("Card error:", e.message);
+        return null;
+    }
 }
 
-// ==================== Prefix System ====================
+// ==================== 🌸 Prefix Check ====================
 async function checkPrefix(api, event, config) {
     if (event.body === config.prefix) {
-        const db = getDB();
         const threadInfo = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-        const groupName = threadInfo?.threadName || config.groupName || "SAYONARA NO MERCY";
+        const groupName = threadInfo?.threadName || config.groupName || "SAYONARA NO MERCY - さよなら";
         
-        const msg = `💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌 💀
+        const msg = `🌸 ━━━━━━━━━━━━━━━━━━━━━ 🌸
+   💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ 💀
+       🏴 さよなら 🏴
+🌸 ━━━━━━━━━━━━━━━━━━━━━ 🌸
+
+🏴 𝐆ʀᴏᴜᴘ: ${groupName}
+👨‍💻 𝐃ᴇᴠ: ${config.developer}
+⚙️ 𝐕ᴇʀꜱɪᴏɴ: ${config.version}
+
 ━━━━━━━━━━━━━━━━━━━━━━━━
-🏴 ɢʀᴏᴜᴘ: ${groupName}
-👨‍💻 ᴅᴇᴠ: ${config.developer}
-⚙️ ᴠᴇʀꜱɪᴏɴ: ${config.version}
+📖 𝐂ᴏᴍᴍᴀɴᴅ 𝐂ᴀᴛᴇɢᴏʀɪᴇꜱ
+━━━━━━━━━━━━━━━━━━━━━━━━
+📄 /page1 - ᴄᴏʀᴇ ᴄᴍᴅꜱ
+📄 /page2 - ᴍᴇᴍʙᴇʀ ᴄᴍᴅꜱ
+📄 /page3 - ꜰᴜɴ ᴄᴍᴅꜱ
+📄 /page4 - ᴘʀᴀɴᴋ ᴄᴍᴅꜱ
+📄 /page5 - ɢʀᴏᴜᴘ ᴄᴍᴅꜱ
+📄 /page6 - ᴍᴏᴅᴇʀᴀᴛɪᴏɴ
+📄 /page7 - ꜱᴇᴄᴜʀɪᴛʏ
 
-📖 ᴛʏᴘᴇ /help ꜰᴏʀ ᴀʟʟ ᴄᴏᴍᴍᴀɴᴅꜱ
-
-📄 ᴘᴀɢᴇꜱ:
-/page1 - ᴍᴇᴍʙᴇʀ
-/page2 - ꜰᴜɴ
-/page3 - ɢʀᴏᴜᴘ ᴀᴅᴍɪɴ
-/page4 - ꜱᴇᴄᴜʀɪᴛʏ
-/page5 - ꜱᴜᴅᴏ ᴏɴʟʏ
-
-💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐍ᴏ ᴍᴇʀᴄʏ${timeFooter()}`;
+🌸 ━━━━━━━━━━━━━━━━━━━━━ 🌸
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
         
         await sendAdvancedGif(api, event, msg, 'itachi');
         return true;
@@ -462,39 +419,17 @@ async function checkPrefix(api, event, config) {
     return false;
 }
 
-// ==================== 👑 Owner/Admin List Helpers ====================
-function getOwnerList(config) {
-    if (!config.owner) return [];
-    if (Array.isArray(config.owner)) return config.owner.map(id => String(id).trim()).filter(id => id);
-    if (typeof config.owner === "string") return config.owner.split(",").map(id => id.trim()).filter(id => id);
-    return [];
-}
-
-function getAdminList(config) {
-    if (!config.botAdmins) return [];
-    if (Array.isArray(config.botAdmins)) return config.botAdmins.map(id => String(id).trim()).filter(id => id);
-    if (typeof config.botAdmins === "string") return config.botAdmins.split(",").map(id => id.trim()).filter(id => id);
-    return [];
-}
-
-
-
-// module.exports এ যোগ করুন
-
-
-
-
-
-
+// ==================== 📤 Exports ====================
 module.exports = {
-    getDB, saveDB, timeFooter, ROLE_LEVELS,
-    getUserRole, hasPermission, permissionDenied,
-    fetchAnimeGif, sendWithGif, guessGender,
-    SLOW_MODE, sleep, isGroupThrottled,
-    isBot, sendAdvancedGif, fetchAdvancedGif,
-    generateWelcomeCard, checkPrefix,
+    getDB, saveDB, timeFooter,
     getDhakaTime, getHourDhaka, isDayTime,
-    shouldRestart, addPingHistory, getAvgPing,
-    cleanOldData, healthCheck,
-    getOwnerList, getAdminList   // ← এই দুটি যোগ করুন
+    ROLE_LEVELS, getUserRole, hasPermission, permissionDenied,
+    getOwnerList, getAdminList,
+    isBot, scanBots,
+    fetchAnimeGif, sendWithGif,
+    fetchAdvancedGif, sendAdvancedGif,
+    guessGender,
+    SLOW_MODE, sleep, isGroupThrottled,
+    healthCheck, cleanOldData,
+    generateWelcomeCard, checkPrefix
 };

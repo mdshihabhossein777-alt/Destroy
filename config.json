@@ -1,13 +1,20 @@
 {
-    "botName": "SAYONARA SYSTEM",
+    "botName": "𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ",
     "prefix": "/",
-    "owner": ["61577562306224", "61586002181800"],
-    "botAdmins": ["61586002181800"],
+    "owner": [
+        "61577562306224",
+        "61586002181800"
+    ],
+    "botAdmins": [],
+    "vips": [],
+    "brothers": [],
+    "army": [],
     "version": "V2.0",
     "previousVersion": "V1.1",
-    "developer": "Ariyan Shihab",
+    "developer": "Shihab",
     "groupName": "SAYONARA NO MERCY - さよなら",
     "notifyGroups": [],
     "autoDetectBots": true,
-    "advancedSecurity": true
+    "realTimeDetection": true,
+    "japaneseTheme": true
 }

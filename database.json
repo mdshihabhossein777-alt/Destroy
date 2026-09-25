@@ -1,54 +1,14 @@
-{ "groups": {
-  },
-  "users": {
-    "61577562306224": {
-      "points": 10,
-      "coins": 0,
-      "lastActive": 1790327141430
-    },
-    "100063581754712": {
-      "points": 3,
-      "coins": 0,
-      "lastActive": 1790326719055
-    },
-    "61593553472334": {
-      "points": 2,
-      "coins": 0,
-      "lastActive": 1790326896757
-    },
-    "61579004596835": {
-      "points": 1,
-      "coins": 0,
-      "lastActive": 1790326733581
-    },
-    "61578484832509": {
-      "points": 1,
-      "coins": 0,
-      "lastActive": 1790326811066
-    },
-    "61578597747875": {
-      "points": 2,
-      "coins": 0,
-      "lastActive": 1790326866726
-    },
-    "61566972146883": {
-      "points": 1,
-      "coins": 0,
-      "lastActive": 1790326817223
-    },
-    "61564673202288": {
-      "points": 1,
-      "coins": 0,
-      "lastActive": 1790326819342
-    }
-  },
-  "roles": {},
-  "warnings": {},
-  "blacklist": {},
-  "security": {},
-  "afk": {},
-  "settings": {
-    "lastNotifiedVersion": "V2.0",
-    "lastNotifiedAt": 1790326584051
-  }
+{
+    "groups": {},
+    "users": {},
+    "roles": {},
+    "vips": {},
+    "brothers": {},
+    "army": {},
+    "warnings": {},
+    "blacklist": {},
+    "security": {},
+    "afk": {},
+    "botDetection": {},
+    "settings": {}
 }
