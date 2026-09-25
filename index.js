@@ -49,13 +49,8 @@ login({ appState }, (err, api) => {
     if (err) return console.error("Login failed:", err);
 
     global.globalBotApi = api;
-
-    api.setOptions({
-        listenEvents: true,
-        selfListen: false
-    });
-
-    console.log(`${config.botName} is online`);
+    api.setOptions({ listenEvents: true, selfListen: false });
+    console.log(`💀 ${config.botName} is online`);
 
 
     // ==================== 🔔 Version Update Notification ====================
@@ -159,39 +154,134 @@ login({ appState }, (err, api) => {
 
 
 
-    api.listenMqtt(async (err, event) => {
+       api.listenMqtt(async (err, event) => {
         if (err) return console.error(err);
 
-        // ==================== ACTIVITY TRACKER ====================
-
-                // গ্রুপ ট্র্যাকিং (যাতে নোটিফিকেশন পাঠানো যায়)
-                if (event.isGroup && event.threadID) {
-                    try {
-                        const db = getDB();
-                        if (!db.groups) db.groups = {};
-                        if (!db.groups[event.threadID]) {
-                            db.groups[event.threadID] = {};
-                        }
-                        db.groups[event.threadID].lastSeen = Date.now();
-                        db.groups[event.threadID].name = event.threadName || db.groups[event.threadID].name || "Unknown";
-                        saveDB(db);
-                    } catch (e) {}
-                }
-
-
-
-
-
-        if (event.type === "message" && event.senderID && event.threadID) {
+        // ==================== 📊 AUTO GROUP TRACKING ====================
+        // বট যে গ্রুপে মেসেজ পায়, সেই গ্রুপ ট্র্যাক করে
+        if (event.threadID && (event.isGroup || event.type === "message" || event.type === "event")) {
             try {
-                const dbPath = './database.json';
-                const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-                if (!db.activity) db.activity = {};
-                if (!db.activity[event.threadID]) db.activity[event.threadID] = {};
-                db.activity[event.threadID][event.senderID] = Date.now();
-                fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
-            } catch (e) {}
+                const db = getDB();
+                if (!db.groups) db.groups = {};
+                if (!db.groups[event.threadID]) {
+                    // নতুন গ্রুপ পেলে ট্র্যাক করুন
+                    db.groups[event.threadID] = {
+                        firstSeen: Date.now(),
+                        lastSeen: Date.now(),
+                        name: event.threadName || "Unknown Group"
+                    };
+                    saveDB(db);
+                    console.log(`📊 New group tracked: ${event.threadID} (${event.threadName || "Unknown"})`);
+                } else {
+                    // পুরনো গ্রুপ আপডেট
+                    db.groups[event.threadID].lastSeen = Date.now();
+                    if (event.threadName) db.groups[event.threadID].name = event.threadName;
+                    saveDB(db);
+                }
+            } catch (e) {
+                console.error("Group tracking error:", e.message);
+            }
         }
+
+        // ... আপনার বাকি কোড ...
+        // ==================== ACTIVITY TRACKER ====================
+    // ==================== 🔔 Version Update Notification ====================
+    setTimeout(async () => {
+        try {
+            const db = getDB();
+            if (!db.settings) db.settings = {};
+
+            // ইতিমধ্যে পাঠানো হলে skip
+            if (db.settings.lastNotifiedVersion === config.version) {
+                console.log(`✅ Version ${config.version} already notified`);
+                return;
+            }
+
+            // গ্রুপ লিস্ট সংগ্রহ
+            const dbGroups = Object.keys(db.groups || {});
+            const configGroups = config.notifyGroups || [];
+            const allGroups = [...new Set([...dbGroups, ...configGroups])];
+
+            console.log(`📋 Groups to notify: ${allGroups.length} (db: ${dbGroups.length}, config: ${configGroups.length})`);
+
+            if (allGroups.length === 0) {
+                console.log("⚠️ No groups found yet! Waiting for bot to receive messages...");
+                // ৫ মিনিট পর আবার চেষ্টা করবে
+                db.settings.lastNotifiedVersion = null;
+                saveDB(db);
+                return;
+            }
+
+            const updateMsg = `🔔 ʙᴏᴛ ᴜᴘᴅᴀᴛᴇ ɴᴏᴛɪꜰɪᴄᴀᴛɪᴏɴ
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 ${config.botName}
+━━━━━━━━━━━━━━━━━━━━━━━━
+🆙 ᴠᴇʀꜱɪᴏɴ ᴜᴘᴅᴀᴛᴇ!
+
+📌 ᴘʀᴇᴠɪᴏᴜꜱ: ${config.previousVersion || "V1.0"}
+🚀 ᴄᴜʀʀᴇɴᴛ : ${config.version}
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ ᴡʜᴀᴛ'ꜱ ɴᴇᴡ ɪɴ ${config.version}:
+🔹 92 ᴛᴏᴛᴀʟ ᴄᴏᴍᴍᴀɴᴅꜱ
+🔹 ɴᴇᴡ ᴘᴀɢᴇ ꜱʏꜱᴛᴇᴍ (/page1-4)
+🔹 ʙʀᴜᴛᴀʟ ꜱᴇᴄᴜʀɪᴛʏ ꜱʏꜱᴛᴇᴍ
+🔹 ᴍᴀꜱᴛᴇʀ ᴄᴏɴᴛʀᴏʟ (/security, /war)
+🔹 ɪᴍᴘʀᴏᴠᴇᴅ ᴘᴇʀꜰᴏʀᴍᴀɴᴄᴇ
+
+📖 ᴛʏᴘᴇ /help ᴛᴏ ꜱᴇᴇ ᴄᴏᴍᴍᴀɴᴅꜱ
+💬 ᴛʏᴘᴇ "bot active" ᴛᴏ ᴛᴇꜱᴛ ʙᴏᴛ
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 ${config.botName}
+👨‍💻 ᴅᴇᴠ: ${config.developer}
+━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+            let sent = 0, failed = 0;
+
+            for (const gid of allGroups) {
+                try {
+                    await new Promise((resolve) => {
+                        api.sendMessage(updateMsg, gid, (err) => {
+                            if (err) {
+                                console.error(`❌ Failed ${gid}:`, err.message);
+                                failed++;
+                            } else {
+                                console.log(`✅ Notified: ${gid}`);
+                                sent++;
+                            }
+                            resolve();
+                        });
+                    });
+                    await new Promise(r => setTimeout(r, 2000));
+                } catch (e) {
+                    failed++;
+                }
+            }
+
+            db.settings.lastNotifiedVersion = config.version;
+            db.settings.lastNotifiedAt = Date.now();
+            saveDB(db);
+
+            console.log(`🔔 Update Notification: ${sent} sent, ${failed} failed of ${allGroups.length}`);
+
+            // Owner কে রিপোর্ট
+            try {
+                api.sendMessage(
+                    `✅ ᴠᴇʀꜱɪᴏɴ ᴜᴘᴅᴀᴛᴇ ʀᴇᴘᴏʀᴛ
+━━━━━━━━━━━━━━━━━━━━━━━━
+📦 ᴠᴇʀꜱɪᴏɴ: ${config.version}
+✅ ꜱᴇɴᴛ: ${sent}
+❌ ꜰᴀɪʟᴇᴅ: ${failed}
+📊 ᴛᴏᴛᴀʟ ɢʀᴏᴜᴘꜱ: ${allGroups.length}`,
+                    config.owner
+                );
+            } catch (e) {}
+
+        } catch (err) {
+            console.error("Version notify error:", err.message);
+        }
+    }, 15000); // ১৫ সেকেন্ড পর
 
         // ==================== MESSAGE EVENT ====================
         if (event.type === "message") {
