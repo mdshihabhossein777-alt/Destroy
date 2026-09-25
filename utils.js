@@ -403,6 +403,40 @@ function healthCheck() {
     };
 }
 
+// ==================== Prefix System ====================
+async function checkPrefix(api, event, config) {
+    if (event.body === config.prefix) {
+        const db = getDB();
+        const threadInfo = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
+        const groupName = threadInfo?.threadName || config.groupName || "SAYONARA NO MERCY";
+        
+        const msg = `💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌 💀
+━━━━━━━━━━━━━━━━━━━━━━━━
+🏴 ɢʀᴏᴜᴘ: ${groupName}
+👨‍💻 ᴅᴇᴠ: ${config.developer}
+⚙️ ᴠᴇʀꜱɪᴏɴ: ${config.version}
+
+📖 ᴛʏᴘᴇ /help ꜰᴏʀ ᴀʟʟ ᴄᴏᴍᴍᴀɴᴅꜱ
+
+📄 ᴘᴀɢᴇꜱ:
+/page1 - ᴍᴇᴍʙᴇʀ
+/page2 - ꜰᴜɴ
+/page3 - ɢʀᴏᴜᴘ ᴀᴅᴍɪɴ
+/page4 - ꜱᴇᴄᴜʀɪᴛʏ
+/page5 - ꜱᴜᴅᴏ ᴏɴʟʏ
+
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐍ᴏ ᴍᴇʀᴄʏ${timeFooter()}`;
+        
+        await sendAdvancedGif(api, event, msg, 'itachi');
+        return true;
+    }
+    return false;
+}
+
+
+
+
+
 // module.exports এ যোগ করুন
 
 
@@ -420,4 +454,5 @@ module.exports = {
     getDhakaTime, getHourDhaka, isDayTime,   // ← নতুন
     shouldRestart, addPingHistory, getAvgPing,  // ← নতুন
     cleanOldData, healthCheck   // ← নতুন
+    
 };
