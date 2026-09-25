@@ -1,6 +1,7 @@
 const fs = require('fs');
 const axios = require('axios');
 const dbFile = './database.json';
+const { createCanvas, loadImage } = require('canvas');
 
 // ==================== Database ====================
 function getDB() {
@@ -191,10 +192,110 @@ function isGroupThrottled(threadID) {
     return false;
 }
 
+// ==================== 🎨 Welcome Card Generator ====================
+async function generateWelcomeCard(userName, userAvatar, groupName, memberCount, addedBy, dateStr) {
+    try {
+        const canvas = createCanvas(700, 300);
+        const ctx = canvas.getContext('2d');
+
+        // Background Image (গ্রুপের ব্যানার)
+        try {
+            const bgImg = await loadImage('https://i.imgur.com/9YdvXbP.png');
+            ctx.drawImage(bgImg, 0, 0, 700, 300);
+        } catch (e) {
+            // Fallback gradient
+            const gradient = ctx.createLinearGradient(0, 0, 700, 300);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(1, '#16213e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 700, 300);
+        }
+
+        // Dark overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, 700, 300);
+
+        // Top bar with group name
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, 700, 50);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 22px Arial';
+        ctx.textAlign = 'left';
+        const shortGroup = groupName.length > 35 ? groupName.slice(0, 32) + '...' : groupName;
+        ctx.fillText(shortGroup, 20, 33);
+
+        // Member count on top right
+        ctx.textAlign = 'right';
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText(`${memberCount} Members`, 680, 33);
+
+        // Avatar with circle
+        if (userAvatar) {
+            try {
+                const avatarImg = await loadImage(userAvatar);
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(120, 180, 70, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+                ctx.drawImage(avatarImg, 50, 110, 140, 140);
+                ctx.restore();
+
+                // White border
+                ctx.beginPath();
+                ctx.arc(120, 180, 70, 0, Math.PI * 2);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+            } catch (e) {
+                console.log("Avatar failed:", e.message);
+            }
+        }
+
+        // Welcome text
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 45px Georgia';
+        ctx.fillText('Welcome', 400, 130);
+
+        // User name
+        ctx.font = 'bold 32px Arial';
+        ctx.fillStyle = '#ffd700';
+        const shortName = userName.length > 25 ? userName.slice(0, 22) + '...' : userName;
+        ctx.fillText(shortName, 400, 175);
+
+        // Date & Time
+        ctx.font = '15px Arial';
+        ctx.fillStyle = '#cccccc';
+        ctx.fillText(dateStr, 400, 210);
+
+        // Added by
+        if (addedBy) {
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#a0a0a0';
+            ctx.fillText(`Added by: ${addedBy}`, 400, 240);
+        }
+
+        // Bottom brand
+        ctx.font = 'bold 14px Arial';
+        ctx.fillStyle = '#00d4ff';
+        ctx.fillText('💀 SAYONARA SYSTEM 💀', 400, 280);
+
+        return canvas.toBuffer();
+    } catch (e) {
+        console.error("Card generation error:", e.message);
+        return null;
+    }
+}
+
+
+
 module.exports = {
     getDB, saveDB, timeFooter, ROLE_LEVELS,
     getUserRole, hasPermission, permissionDenied,
     fetchAnimeGif, sendWithGif, guessGender,
     SLOW_MODE, sleep, isGroupThrottled,
-    isBot, sendAdvancedGif, fetchAdvancedGif
+    isBot, sendAdvancedGif, fetchAdvancedGif,
+    generateWelcomeCard   // ← নতুন
 };

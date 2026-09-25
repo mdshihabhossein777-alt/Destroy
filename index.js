@@ -4,7 +4,7 @@ const axios = require('axios');
 const http = require('http');
 const login = require('@dongdev/fca-unofficial');
 const config = require('./config.json');
-const { getDB, saveDB, timeFooter, sendWithGif, guessGender, getUserRole, hasPermission, permissionDenied, SLOW_MODE, sleep, isGroupThrottled, isBot, sendAdvancedGif } = require('./utils');
+const { getDB, saveDB, timeFooter, sendWithGif, guessGender, getUserRole, hasPermission, permissionDenied, SLOW_MODE, sleep, isGroupThrottled, isBot, sendAdvancedGif, generateWelcomeCard } = require('./utils');
 
 // ==================== AppState Load ====================
 let appState;
@@ -236,27 +236,85 @@ login({ appState }, (err, api) => {
                 }
             }
 
-            // WELCOME
-            if (event.logMessageType === "log:subscribe") {
-                const added = event.logMessageData?.addedParticipants || [];
-                const botID = api.getCurrentUserID();
-                const isBotJoined = added.some(p => p.userFbId === botID);
+            // ==================== 🎉 WELCOME EVENT ====================
+if (event.logMessageType === "log:subscribe") {
+    const added = event.logMessageData?.addedParticipants || [];
+    const botID = api.getCurrentUserID();
+    const isBotJoined = added.some(p => p.userFbId === botID);
 
-                if (isBotJoined) {
-                    api.sendMessage(`👻 ᴛʜᴀɴᴋꜱ!\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ\n✅ "bot active"${timeFooter()}`, tid);
+    if (isBotJoined) {
+        api.sendMessage(`👻 ᴛʜᴀɴᴋꜱ ꜰᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ!\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌\n✅ ᴛʏᴘᴇ "bot active"${timeFooter()}`, tid);
+    } else {
+        try {
+            const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
+            const gname = info?.threadName || "SAYONARA NO MERCY - さよなら";
+            const mcount = info?.participantIDs?.length || 0;
+
+            // কে অ্যাড করলো?
+            let addedBy = "Unknown";
+            try {
+                const adminInfo = await new Promise(r => api.getUserInfo(event.author, (e, ret) => r(e ? null : ret[event.author])));
+                if (adminInfo) addedBy = adminInfo.name;
+            } catch (e) {}
+
+            // বর্তমান দিন ও সময়
+            const now = new Date();
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayName = days[now.getDay()];
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const year = now.getFullYear();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const dateStr = `${dayName}, ${month}/${day}/${year}, ${hours}:${minutes}:${seconds} ${hours >= 12 ? 'PM' : 'AM'}`;
+
+            for (const p of added) {
+                const name = p.fullName || "New Member";
+
+                // Welcome Text Message
+                const welcomeText = `Hello ${name}
+Welcome to ${gname}
+You're the ${mcount} member on this group, please enjoy 🎉
+
+➕ Added by : ${addedBy}
+━━━━━━━━━━━━━━━━━━━━━━━━
+📅 ${dateStr}${timeFooter()}`;
+
+                // Avatar URL
+                const avatarUrl = `https://graph.facebook.com/${p.userFbId}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
+
+                // Welcome Card তৈরি
+                const cardBuffer = await generateWelcomeCard(name, avatarUrl, gname, mcount, addedBy, dateStr);
+
+                if (cardBuffer) {
+                    const { PassThrough } = require('stream');
+                    const stream = new PassThrough();
+                    stream.end(cardBuffer);
+
+                    // প্রথমে টেক্সট মেসেজ
+                    api.sendMessage({
+                        body: welcomeText,
+                        mentions: [{ tag: name, id: p.userFbId }]
+                    }, tid);
+
+                    await sleep(1500);
+
+                    // তারপর কার্ড
+                    api.sendMessage({
+                        attachment: stream
+                    }, tid);
                 } else {
-                    try {
-                        const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
-                        const gname = info?.threadName || "Group";
-                        const mcount = info?.participantIDs?.length || 0;
-                        for (const p of added) {
-                            const name = p.fullName || "New Member";
-                            const wm = `🌸 ᴡᴇʟᴄᴏᴍᴇ ${name}!\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌹 ᴛᴏ ${config.groupName || "SAYONARA NO MERCY"}!\n👥 ${mcount} ᴍᴇᴍʙᴇʀꜱ\n📌 ${gname}\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ`;
-                            await sendAdvancedGif(api, event, wm + timeFooter(), 'welcome', [{ tag: name, id: p.userFbId }]);
-                        }
-                    } catch (e) {}
+                    await sendAdvancedGif(api, event, welcomeText, 'welcome', [{ tag: name, id: p.userFbId }]);
                 }
+
+                await sleep(2000);
             }
+        } catch (e) {
+            console.error("Welcome error:", e.message);
+        }
+    }
+}
 
             // LEFT
             if (event.logMessageType === "log:unsubscribe") {
