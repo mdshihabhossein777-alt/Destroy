@@ -10,7 +10,7 @@
     "license": "ISC",
     "dependencies": {
         "@dongdev/fca-unofficial": "^4.0.3",
-        "axios": "^1.6.0",
-        "canvas": "^3.2.3"
+        "@napi-rs/canvas": "^1.0.9",
+        "axios": "^1.6.0"
     }
 }

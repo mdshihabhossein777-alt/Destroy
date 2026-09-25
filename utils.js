@@ -1,7 +1,7 @@
 const fs = require('fs');
 const axios = require('axios');
 const dbFile = './database.json';
-const { createCanvas, loadImage } = require('canvas');
+const { createCanvas, loadImage } = require('@napi-rs/canvas');
 
 // ==================== Database ====================
 function getDB() {
