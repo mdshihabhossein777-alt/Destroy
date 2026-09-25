@@ -238,53 +238,121 @@ login({ appState }, (err, api) => {
             const isAdmin = isOwner || isBotAdmin || isGroupAdmin;
 
             // ==================== LOCK NAME ====================
-            if (event.logMessageType === "log:thread-name" && grp.lockName) {
-                if (!isOwner && !isBotAdmin) {
-                    let savedName = db.groups[tid]?.lockedName;
-                    if (!savedName || savedName === "Unknown") {
-                        try {
-                            const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
-                            if (info?.threadName && info.threadName !== "Unknown") {
-                                savedName = info.threadName;
-                                db.groups[tid].lockedName = savedName;
-                                saveDB(db);
-                            }
-                        } catch (e) {}
-                    }
-                    if (savedName && savedName !== "Unknown") {
-                        try {
-                            await new Promise(r => api.setTitle(savedName, tid, () => r()));
-                            api.sendMessage(`🔒 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ɢʀᴏᴜᴘ ɴᴀᴍᴇ ʟᴏᴄᴋᴇᴅ!\n📌 ${savedName}${timeFooter()}`, tid);
-                        } catch (e) {}
-                    }
-                } else {
-                    try {
-                        const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
-                        if (info?.threadName && info.threadName !== "Unknown") {
-                            db.groups[tid].lockedName = info.threadName;
-                            db.groups[tid].name = info.threadName;
-                            saveDB(db);
-                        }
-                    } catch (e) {}
+           // ==================== 🔒 LOCK NAME (Fixed) ====================
+if (event.logMessageType === "log:thread-name" && grp.lockName) {
+    const authorID = event.author;
+    const botID = api.getCurrentUserID();
+    
+    // ✅ বট নিজেই চেঞ্জ করলে ইগনোর
+    if (authorID === botID) {
+        // চুপচাপ ইগনোর
+    }
+    // ✅ Owner/Bot Admin চেঞ্জ করলে সেভ করুন
+    else if (isOwner || isBotAdmin) {
+        try {
+            const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
+            if (info?.threadName && info.threadName !== "Unknown") {
+                db.groups[tid].lockedName = info.threadName;
+                db.groups[tid].name = info.threadName;
+                saveDB(db);
+            }
+        } catch (e) {}
+    }
+    // ✅ সত্যিকারের লঙ্ঘন — রিভার্ট
+    else {
+        let savedName = db.groups[tid]?.lockedName;
+        
+        if (!savedName || savedName === "Unknown" || savedName.trim() === "") {
+            try {
+                const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
+                if (info?.threadName && info.threadName !== "Unknown") {
+                    savedName = info.threadName;
+                    db.groups[tid].lockedName = savedName;
+                    saveDB(db);
                 }
-            }
+            } catch (e) {}
+        }
+        
+        if (savedName && savedName !== "Unknown") {
+            try {
+                await sleep(500);
+                await new Promise(r => api.setTitle(savedName, tid, () => r()));
+                api.sendMessage(
+                    `🔒 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ɢʀᴏᴜᴘ ɴᴀᴍᴇ ʟᴏᴄᴋᴇᴅ!
+━━━━━━━━━━━━━━━━━━━━━━━━
+📌 ʀᴇꜱᴛᴏʀᴇᴅ: ${savedName}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ꜱʏꜱᴛᴇᴍ${timeFooter()}`,
+                    tid
+                );
+            } catch (e) {}
+        }
+    }
+}
 
-            // LOCK PHOTO
-            if (event.logMessageType === "log:thread-icon" && grp.lockPhoto && !isAdmin) {
-                api.sendMessage(`🔒 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ᴘʜᴏᴛᴏ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
-            }
-
+            // ==================== 🔒 LOCK PHOTO (Fixed) ====================
+if (event.logMessageType === "log:thread-icon" && grp.lockPhoto) {
+    const authorID = event.author;
+    const botID = api.getCurrentUserID();
+    
+    // বট নিজে বা Admin হলে ইগনোর
+    if (authorID !== botID && !isAdmin) {
+        await sleep(500);
+        api.sendMessage(
+            `🔒 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ᴘʜᴏᴛᴏ ɪꜱ ʟᴏᴄᴋᴇᴅ!
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ Photo changes are not allowed
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ꜱʏꜱᴛᴇᴍ${timeFooter()}`,
+            tid
+        );
+    }
+}
             // LOCK NICK
-            if (event.logMessageType === "log:user-nickname" && grp.lockNick && !isAdmin) {
-                const target = event.logMessageData?.participant_id;
-                if (target) {
-                    try {
-                        await new Promise(r => api.changeNickname("", tid, target, () => r()));
-                        api.sendMessage(`🔒 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ɴɪᴄᴋɴᴀᴍᴇ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
-                    } catch (e) {}
-                }
-            }
-
+            // ==================== 🔒 LOCK NICK (Fixed - No Loop) ====================
+if (event.logMessageType === "log:user-nickname" && grp.lockNick) {
+    const target = event.logMessageData?.participant_id;
+    const authorID = event.author;
+    const botID = api.getCurrentUserID();
+    
+    // ✅ ১. বট নিজেই চেঞ্জ করলে ইগনোর
+    if (authorID === botID) {
+        // চুপচাপ ইগনোর
+    }
+    // ✅ ২. Admin/Owner চেঞ্জ করলে ইগনোর
+    else if (isAdmin) {
+        // চুপচাপ ইগনোর
+    }
+    // ✅ ৩. target না থাকলে ইগনোর
+    else if (!target) {
+        // চুপচাপ ইগনোর
+    }
+    // ✅ ৪. target বট নিজেই হলে ইগনোর
+    else if (target === botID) {
+        // চুপচাপ ইগনোর
+    }
+    // ✅ ৫. সত্যিকারের লঙ্ঘন — এখন রিভার্ট করব
+    else {
+        try {
+            await sleep(500); // অল্প দেরি
+            await new Promise(r => {
+                api.changeNickname("", tid, target, () => r());
+            });
+            
+            // ✅ একবারই মেসেজ পাঠাব
+            api.sendMessage(
+                `🔒 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐍ɪᴄᴋɴᴀᴍᴇ ʟᴏᴄᴋᴇᴅ!
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ Nickname changes are not allowed
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ꜱʏꜱᴛᴇᴍ${timeFooter()}`,
+                tid
+            );
+        } catch (e) {
+            console.error("Nick lock error:", e.message);
+        }
+    }
+}
             // ANTI-RAID
             if (event.logMessageType === "log:subscribe" && sec.antiRaid) {
                 if (!joinTracker[tid]) joinTracker[tid] = [];
