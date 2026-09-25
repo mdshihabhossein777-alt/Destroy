@@ -9,8 +9,8 @@
     "author": "Shihab",
     "license": "ISC",
     "dependencies": {
-        "@dongdev/fca-unofficial": "^3.0.0",
-        "axios": "^1.6.0",
-        "@napi-rs/canvas": "^0.1.58"
+        "@dongdev/fca-unofficial": "^4.0.3",
+        "@napi-rs/canvas": "^0.1.58",
+        "axios": "^1.6.0"
     }
 }

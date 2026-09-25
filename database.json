@@ -1,14 +1,48 @@
 {
-    "groups": {},
-    "users": {},
-    "roles": {},
-    "vips": {},
-    "brothers": {},
-    "army": {},
-    "warnings": {},
-    "blacklist": {},
-    "security": {},
-    "afk": {},
-    "botDetection": {},
-    "settings": {}
+  "groups": {
+    "1023835213991536": {
+      "firstSeen": 1790354209857,
+      "lastSeen": 1790354243109,
+      "name": "Unknown"
+    },
+    "2123911331473921": {
+      "firstSeen": 1790354234031,
+      "lastSeen": 1790354234031,
+      "name": "Unknown"
+    }
+  },
+  "users": {
+    "100084029208063": {
+      "points": 1,
+      "coins": 0,
+      "lastActive": 1790354192329
+    },
+    "61593650632648": {
+      "points": 1,
+      "coins": 0,
+      "lastActive": 1790354195539
+    },
+    "61592568192257": {
+      "points": 2,
+      "coins": 0,
+      "lastActive": 1790354223755
+    },
+    "61583834909379": {
+      "points": 1,
+      "coins": 0,
+      "lastActive": 1790354243110
+    }
+  },
+  "roles": {},
+  "vips": {},
+  "brothers": {},
+  "army": {},
+  "warnings": {},
+  "blacklist": {},
+  "security": {},
+  "afk": {},
+  "botDetection": {},
+  "settings": {
+    "lastNotifiedVersion": "V3.0"
+  }
 }

@@ -1,20 +1,24 @@
 {
-    "botName": "𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ",
-    "prefix": "/",
-    "owner": [
-        "61577562306224",
-        "61586002181800"
-    ],
-    "botAdmins": [],
-    "vips": [],
-    "brothers": [],
-    "army": [],
-    "version": "V3.0",
-    "previousVersion": "V2.0",
-    "developer": "Shihab",
-    "groupName": "SAYONARA NO MERCY - さよなら",
-    "notifyGroups": [],
-    "autoDetectBots": true,
-    "realTimeDetection": true,
-    "japaneseTheme": true
+  "botName": "𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ",
+  "prefix": "/",
+  "owner": [
+    "61577562306224",
+    "61586002181800"
+  ],
+  "botAdmins": [],
+  "vips": [],
+  "brothers": [],
+  "army": [],
+  "version": "V3.0",
+  "previousVersion": "V2.0",
+  "developer": "Shihab",
+  "groupName": "SAYONARA NO MERCY - さよなら",
+  "notifyGroups": [
+    "902413072587606",
+    "2123911331473921",
+    "1023835213991536"
+  ],
+  "autoDetectBots": true,
+  "realTimeDetection": true,
+  "japaneseTheme": true
 }
