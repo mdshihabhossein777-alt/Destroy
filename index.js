@@ -4,6 +4,7 @@ const axios = require('axios');
 const http = require('http');
 const login = require('@dongdev/fca-unofficial');
 const config = require('./config.json');
+// SAYONARA SYSTEM - Update 2.1 (Real-Time Guardian Active)
 
 // ==================== 🔧 Utils Import ====================
 const { 
