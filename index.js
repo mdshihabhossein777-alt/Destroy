@@ -59,43 +59,124 @@ login({ appState }, (err, api) => {
     api.setOptions({ listenEvents: true, selfListen: false });
     console.log(`💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌 is online`);
 
-    // ==================== 🔔 AUTO NOTIFICATION ====================
+       // ==================== 🔔 AUTO NOTIFICATION (Fixed) ====================
     setTimeout(async () => {
         try {
             const db = getDB();
             if (!db.settings) db.settings = {};
+            if (!db.groups) db.groups = {};
 
-            const dbGroups = Object.keys(db.groups || {});
+            const dbGroups = Object.keys(db.groups);
             const configGroups = config.notifyGroups || [];
             const allGroups = [...new Set([...dbGroups, ...configGroups])];
 
             console.log(`📋 Groups to notify: ${allGroups.length}`);
-            if (allGroups.length === 0) return;
+
+            if (allGroups.length === 0) {
+                console.log("⚠️ No groups yet. Auto-track on message.");
+                return;
+            }
 
             const currentVersion = config.version || "V2.0";
-            if (db.settings.lastNotifiedVersion === currentVersion) return;
+            if (db.settings.lastNotifiedVersion === currentVersion) {
+                console.log(`✅ Version ${currentVersion} already notified`);
+                return;
+            }
 
             const updateMsg = `🔔 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ᴜᴘᴅᴀᴛᴇ
 ━━━━━━━━━━━━━━━━━━━━━━━━
-💀 ${config.botName}
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌
+━━━━━━━━━━━━━━━━━━━━━━━━
+🆙 ᴠᴇʀꜱɪᴏɴ ᴜᴘᴅᴀᴛᴇ!
+
 📌 ᴘʀᴇᴠɪᴏᴜꜱ: ${config.previousVersion || "V1.1"}
 🚀 ᴄᴜʀʀᴇɴᴛ : ${currentVersion}
 
-📖 /help ꜰᴏʀ ᴄᴏᴍᴍᴀɴᴅꜱ
-🛡️ /security on${timeFooter()}`;
+✨ ɴᴇᴡ ꜰᴇᴀᴛᴜʀᴇꜱ:
+🔹 ᴡᴇʟᴄᴏᴍᴇ ᴄᴀʀᴅ ᴡɪᴛʜ ɢɪꜰ
+🔹 ꜰᴜʟʟ ꜱᴇᴄᴜʀɪᴛʏ
+🔹 107 ᴄᴏᴍᴍᴀɴᴅꜱ
+
+🛡️ /security on
+📖 /help
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+👨‍💻 ᴅᴇᴠ: ${config.developer}
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ
+━━━━━━━━━━━━━━━━━━━━━━━━${timeFooter()}`;
 
             let sent = 0;
+            let failed = 0;
+            let removed = 0;
+
             for (const gid of allGroups) {
                 try {
-                    await new Promise(r => api.sendMessage(updateMsg, gid, () => r()));
-                    sent++;
+                    // ✅ গ্রুপটি বৈধ কি না চেক করুন
+                    const isValid = await new Promise(r => {
+                        let done = false;
+                        const timeout = setTimeout(() => { if (!done) { done = true; r(false); } }, 8000);
+                        api.getThreadInfo(gid, (err, info) => {
+                            if (done) return;
+                            done = true;
+                            clearTimeout(timeout);
+                            if (err || !info || !info.threadID) r(false);
+                            else r(true);
+                        });
+                    });
+
+                    if (!isValid) {
+                        console.log(`⚠️ Invalid group removed: ${gid}`);
+                        // ডেটাবেস থেকে সরান
+                        if (db.groups[gid]) {
+                            delete db.groups[gid];
+                            removed++;
+                        }
+                        continue;
+                    }
+
+                    // ✅ গ্রুপ বৈধ হলে মেসেজ পাঠান
+                    await new Promise(r => {
+                        api.sendMessage(updateMsg, gid, (err) => {
+                            if (err) failed++;
+                            else sent++;
+                            r();
+                        });
+                    });
+
                     await sleep(SLOW_MODE.notificationDelay);
-                } catch (e) {}
+                } catch (e) {
+                    failed++;
+                }
             }
+
+            // ডেটাবেস থেকে পুরনো গ্রুপ সরান
+            if (removed > 0) {
+                console.log(`🧹 Removed ${removed} invalid groups`);
+            }
+
             db.settings.lastNotifiedVersion = currentVersion;
+            db.settings.lastNotifiedAt = Date.now();
             saveDB(db);
-            console.log(`🔔 Notified: ${sent}/${allGroups.length}`);
-        } catch (e) {}
+
+            console.log(`🔔 Notified: ${sent} sent, ${failed} failed, ${removed} removed`);
+
+            // Owner কে রিপোর্ট
+            try {
+                api.sendMessage(
+                    `✅ ɴᴏᴛɪꜰɪᴄᴀᴛɪᴏɴ ʀᴇᴘᴏʀᴛ
+━━━━━━━━━━━━━━━━━━━━━━━━
+📦 ᴠᴇʀꜱɪᴏɴ: ${currentVersion}
+✅ ꜱᴇɴᴛ: ${sent}
+❌ ꜰᴀɪʟᴇᴅ: ${failed}
+🧹 ʀᴇᴍᴏᴠᴇᴅ: ${removed}
+📊 ᴛᴏᴛᴀʟ: ${allGroups.length}${timeFooter()}`,
+                    config.owner
+                );
+            } catch (e) {}
+
+        } catch (e) {
+            console.error("Notify error:", e.message);
+        }
     }, 15000);
 
     // ==================== 📨 MAIN LISTENER (একটিই!) ====================

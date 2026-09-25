@@ -7,12 +7,7 @@
   "previousVersion": "V1.1",
   "developer": "Ariyan Shihab",
   "groupName": "SAYONARA NO MERCY - さよなら",
-  "notifyGroups": [
-    "1023835213991536",
-    "2123911331473921",
-    "902413072587606",
-    "4629715110683132"
-  ],
+  "notifyGroups": [],
   "autoDetectBots": true,
   "advancedSecurity": true
 }
