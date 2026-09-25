@@ -4,7 +4,8 @@ const axios = require('axios');
 const http = require('http');
 const login = require('@dongdev/fca-unofficial');
 const config = require('./config.json');
-const { getDB, saveDB, timeFooter, sendWithGif, guessGender, getUserRole, hasPermission, permissionDenied, SLOW_MODE, sleep, isGroupThrottled } = require('./utils');
+const { getDB, saveDB, timeFooter, sendWithGif, guessGender, getUserRole, hasPermission, permissionDenied, SLOW_MODE, sleep, isGroupThrottled, isBot, sendAdvancedGif } = require('./utils');
+
 // ==================== AppState Load ====================
 let appState;
 try {
@@ -30,7 +31,12 @@ function loadCommands(dir) {
             try {
                 const mod = require(path.join(__dirname, dir, file));
                 for (const name in mod) {
-                    if (typeof mod[name] === 'function') commands[name] = mod[name];
+                    if (typeof mod[name] === 'function') {
+                        if (commands[name]) {
+                            console.log(`⚠️ Duplicate command: ${name} in ${file}`);
+                        }
+                        commands[name] = mod[name];
+                    }
                 }
             } catch (e) {
                 console.error(`❌ Load failed: ${file} -`, e.message);
@@ -42,7 +48,6 @@ loadCommands('./commands');
 loadCommands('./security');
 console.log(`📦 Total ${Object.keys(commands).length} commands loaded`);
 
-// ==================== Trackers ====================
 const lastMsg = {};
 const joinTracker = {};
 
@@ -52,9 +57,9 @@ login({ appState }, (err, api) => {
 
     global.globalBotApi = api;
     api.setOptions({ listenEvents: true, selfListen: false });
-    console.log(`💀 ${config.botName} is online`);
+    console.log(`💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌 is online`);
 
-    // ==================== 🔔 AUTO NOTIFICATION ON STARTUP ====================
+    // ==================== 🔔 AUTO NOTIFICATION ====================
     setTimeout(async () => {
         try {
             const db = getDB();
@@ -64,58 +69,36 @@ login({ appState }, (err, api) => {
             const configGroups = config.notifyGroups || [];
             const allGroups = [...new Set([...dbGroups, ...configGroups])];
 
-            console.log(`📋 Groups to notify: ${allGroups.length} (DB: ${dbGroups.length}, Config: ${configGroups.length})`);
+            console.log(`📋 Groups to notify: ${allGroups.length}`);
+            if (allGroups.length === 0) return;
 
-            if (allGroups.length === 0) {
-                console.log("⚠️ No groups yet. Auto-track when messages arrive.");
-                return;
-            }
+            const currentVersion = config.version || "V2.0";
+            if (db.settings.lastNotifiedVersion === currentVersion) return;
 
-            const currentVersion = config.version || "V1.1";
-            if (db.settings.lastNotifiedVersion === currentVersion) {
-                console.log(`✅ Version ${currentVersion} already notified`);
-                return;
-            }
-
-            const updateMsg = `🔔 ʙᴏᴛ ᴜᴘᴅᴀᴛᴇ ɴᴏᴛɪꜰɪᴄᴀᴛɪᴏɴ
+            const updateMsg = `🔔 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ᴜᴘᴅᴀᴛᴇ
 ━━━━━━━━━━━━━━━━━━━━━━━━
 💀 ${config.botName}
-━━━━━━━━━━━━━━━━━━━━━━━━
-🆙 ᴠᴇʀꜱɪᴏɴ ᴜᴘᴅᴀᴛᴇ!
-
-📌 ᴘʀᴇᴠɪᴏᴜꜱ: ${config.previousVersion || "V1.0"}
+📌 ᴘʀᴇᴠɪᴏᴜꜱ: ${config.previousVersion || "V1.1"}
 🚀 ᴄᴜʀʀᴇɴᴛ : ${currentVersion}
-━━━━━━━━━━━━━━━━━━━━━━━━
 
-✨ ɴᴇᴡ ꜰᴇᴀᴛᴜʀᴇꜱ:
-🔹 ꜰᴜʟʟ ꜱᴇᴄᴜʀɪᴛʏ ꜱʏꜱᴛᴇᴍ
-🔹 ꜱʟᴏᴡ ᴍᴏᴅᴇ
-🔹 ɢʀᴏᴜᴘ ɴᴀᴍᴇ ʟᴏᴄᴋ
-
-🛡️ /security on ꜰᴏʀ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ
 📖 /help ꜰᴏʀ ᴄᴏᴍᴍᴀɴᴅꜱ
+🛡️ /security on${timeFooter()}`;
 
-━━━━━━━━━━━━━━━━━━━━━━━━
-👨‍💻 ᴅᴇᴠ: ${config.developer}
-━━━━━━━━━━━━━━━━━━━━━━━━${timeFooter()}`;
-
-            let sent = 0, failed = 0;
+            let sent = 0;
             for (const gid of allGroups) {
                 try {
                     await new Promise(r => api.sendMessage(updateMsg, gid, () => r()));
                     sent++;
                     await sleep(SLOW_MODE.notificationDelay);
-                } catch (e) { failed++; }
+                } catch (e) {}
             }
-
             db.settings.lastNotifiedVersion = currentVersion;
-            db.settings.lastNotifiedAt = Date.now();
             saveDB(db);
             console.log(`🔔 Notified: ${sent}/${allGroups.length}`);
-        } catch (e) { console.error("Notify error:", e.message); }
+        } catch (e) {}
     }, 15000);
 
-    // ==================== 📨 MAIN LISTENER ====================
+    // ==================== 📨 MAIN LISTENER (একটিই!) ====================
     api.listenMqtt(async (err, event) => {
         if (err) return console.error("MQTT Error:", err.message);
         if (!event) return;
@@ -124,7 +107,7 @@ login({ appState }, (err, api) => {
             const db = getDB();
             const tid = event.threadID;
 
-            // ==================== 📊 AUTO GROUP TRACKING ====================
+            // ==================== AUTO GROUP TRACKING ====================
             if (tid && event.isGroup) {
                 if (!db.groups) db.groups = {};
                 if (!db.groups[tid]) {
@@ -152,16 +135,15 @@ login({ appState }, (err, api) => {
                 }
             }
 
-            // ==================== 👤 USER ACTIVITY ====================
+            // ==================== USER ACTIVITY ====================
             if (event.senderID && event.type === "message") {
                 if (!db.users) db.users = {};
-                if (!db.users[event.senderID]) db.users[event.senderID] = { points: 0, lastActive: 0 };
+                if (!db.users[event.senderID]) db.users[event.senderID] = { points: 0, coins: 0, lastActive: 0 };
                 db.users[event.senderID].points = (db.users[event.senderID].points || 0) + 1;
                 db.users[event.senderID].lastActive = Date.now();
                 saveDB(db);
             }
 
-            // ==================== 🚫 BOT OFF ====================
             if (tid && db.security?.[tid]?.botOff && event.senderID !== config.owner) return;
 
             const sec = db.security?.[tid] || {};
@@ -172,12 +154,11 @@ login({ appState }, (err, api) => {
             const isGroupAdmin = senderRole === "groupadmin";
             const isAdmin = isOwner || isBotAdmin || isGroupAdmin;
 
-            // ==================== 🔒 LOCK NAME ====================
+            // ==================== LOCK NAME ====================
             if (event.logMessageType === "log:thread-name" && grp.lockName) {
-                console.log(`🔒 Name change detected`);
                 if (!isOwner && !isBotAdmin) {
                     let savedName = db.groups[tid]?.lockedName;
-                    if (!savedName || savedName === "Unknown" || savedName.trim() === "") {
+                    if (!savedName || savedName === "Unknown") {
                         try {
                             const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
                             if (info?.threadName && info.threadName !== "Unknown") {
@@ -190,10 +171,8 @@ login({ appState }, (err, api) => {
                     if (savedName && savedName !== "Unknown") {
                         try {
                             await new Promise(r => api.setTitle(savedName, tid, () => r()));
-                            api.sendMessage(`🔒 ɢʀᴏᴜᴘ ɴᴀᴍᴇ ɪꜱ ʟᴏᴄᴋᴇᴅ!\n📌 ʀᴇꜱᴛᴏʀᴇᴅ: ${savedName}${timeFooter()}`, tid);
-                        } catch (e) {
-                            console.error("Restore failed:", e.message);
-                        }
+                            api.sendMessage(`🔒 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ɢʀᴏᴜᴘ ɴᴀᴍᴇ ʟᴏᴄᴋᴇᴅ!\n📌 ${savedName}${timeFooter()}`, tid);
+                        } catch (e) {}
                     }
                 } else {
                     try {
@@ -207,23 +186,23 @@ login({ appState }, (err, api) => {
                 }
             }
 
-            // ==================== 🔒 LOCK PHOTO ====================
+            // LOCK PHOTO
             if (event.logMessageType === "log:thread-icon" && grp.lockPhoto && !isAdmin) {
-                api.sendMessage(`🔒 ᴘʜᴏᴛᴏ ɪꜱ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
+                api.sendMessage(`🔒 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ᴘʜᴏᴛᴏ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
             }
 
-            // ==================== 🔒 LOCK NICK ====================
+            // LOCK NICK
             if (event.logMessageType === "log:user-nickname" && grp.lockNick && !isAdmin) {
                 const target = event.logMessageData?.participant_id;
                 if (target) {
                     try {
                         await new Promise(r => api.changeNickname("", tid, target, () => r()));
-                        api.sendMessage(`🔒 ɴɪᴄᴋɴᴀᴍᴇ ɪꜱ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
+                        api.sendMessage(`🔒 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ɴɪᴄᴋɴᴀᴍᴇ ʟᴏᴄᴋᴇᴅ!${timeFooter()}`, tid);
                     } catch (e) {}
                 }
             }
 
-            // ==================== 🛡️ ANTI-RAID ====================
+            // ANTI-RAID
             if (event.logMessageType === "log:subscribe" && sec.antiRaid) {
                 if (!joinTracker[tid]) joinTracker[tid] = [];
                 const now = Date.now();
@@ -233,18 +212,38 @@ login({ appState }, (err, api) => {
                     db.groups[tid] = db.groups[tid] || {};
                     db.groups[tid].lockAll = true;
                     saveDB(db);
-                    api.sendMessage(`🚨 ᴀɴᴛɪ-ʀᴀɪᴅ ᴛʀɪɢɢᴇʀᴇᴅ!${timeFooter()}`, tid);
+                    api.sendMessage(`🚨 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ᴀɴᴛɪ-ʀᴀɪᴅ!${timeFooter()}`, tid);
                 }
             }
 
-            // ==================== 🎉 WELCOME ====================
+            // AUTO BOT KICK
+            if (event.logMessageType === "log:subscribe" && sec.antiBotAuto) {
+                const added = event.logMessageData?.addedParticipants || [];
+                const botID = api.getCurrentUserID();
+                for (const p of added) {
+                    if (p.userFbId === botID) continue;
+                    setTimeout(async () => {
+                        try {
+                            const user = await new Promise(r => api.getUserInfo(p.userFbId, (e, ret) => r(e ? null : ret[p.userFbId])));
+                            if (user && isBot(user.name)) {
+                                await sleep(2000);
+                                api.removeUserFromGroup(p.userFbId, tid, (err) => {
+                                    if (!err) api.sendMessage(`🤖 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 ᴀɴᴛɪ-ʙᴏᴛ!\n⚠️ ${user.name} ᴋɪᴄᴋᴇᴅ${timeFooter()}`, tid);
+                                });
+                            }
+                        } catch (e) {}
+                    }, 3000);
+                }
+            }
+
+            // WELCOME
             if (event.logMessageType === "log:subscribe") {
                 const added = event.logMessageData?.addedParticipants || [];
                 const botID = api.getCurrentUserID();
-                const isBot = added.some(p => p.userFbId === botID);
+                const isBotJoined = added.some(p => p.userFbId === botID);
 
-                if (isBot) {
-                    api.sendMessage(`👻 ᴛʜᴀɴᴋꜱ ꜰᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ!\n💀 ${config.botName}\n✅ ᴛʏᴘᴇ "bot active"${timeFooter()}`, tid);
+                if (isBotJoined) {
+                    api.sendMessage(`👻 ᴛʜᴀɴᴋꜱ!\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ\n✅ "bot active"${timeFooter()}`, tid);
                 } else {
                     try {
                         const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
@@ -252,28 +251,26 @@ login({ appState }, (err, api) => {
                         const mcount = info?.participantIDs?.length || 0;
                         for (const p of added) {
                             const name = p.fullName || "New Member";
-                            const wm = `🌸 ᴡᴇʟᴄᴏᴍᴇ ${name}!\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌹 ᴛᴏ ᴏᴜʀ ꜰᴀᴍɪʟʏ!\n⭐ ᴡᴇ'ʀᴇ ᴇxᴄɪᴛᴇᴅ!\n━━━━━━━━━━━━━━━━━━━━━━━━\n👥 ᴍᴇᴍʙᴇʀꜱ: ${mcount}\n📌 ɢʀᴏᴜᴘ: ${gname}`;
-                            await sendWithGif(api, event, wm + timeFooter(), 'wave', [{ tag: name, id: p.userFbId }]);
+                            const wm = `🌸 ᴡᴇʟᴄᴏᴍᴇ ${name}!\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌹 ᴛᴏ ${config.groupName || "SAYONARA NO MERCY"}!\n👥 ${mcount} ᴍᴇᴍʙᴇʀꜱ\n📌 ${gname}\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ`;
+                            await sendAdvancedGif(api, event, wm + timeFooter(), 'welcome', [{ tag: name, id: p.userFbId }]);
                         }
                     } catch (e) {}
                 }
             }
 
-            // ==================== 👋 LEFT ====================
+            // LEFT
             if (event.logMessageType === "log:unsubscribe") {
                 const lid = event.logMessageData?.leftParticipantFbId;
                 if (lid && lid !== api.getCurrentUserID()) {
                     const kicked = event.author !== lid;
                     try {
-                        const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
                         api.getUserInfo(lid, async (e, ret) => {
                             if (e) return;
                             const name = ret[lid]?.name || "A member";
-                            const mcount = info?.participantIDs?.length || 0;
                             const msg = kicked
-                                ? `👢 ${name} ᴡᴀꜱ ᴋɪᴄᴋᴇᴅ\n👥 ʀᴇᴍᴀɪɴɪɴɢ: ${mcount}`
-                                : `🍂 ɢᴏᴏᴅʙʏᴇ ${name}\n💔 ᴡᴇ'ʟʟ ᴍɪꜱꜱ ʏᴏᴜ\n👥 ʀᴇᴍᴀɪɴɪɴɢ: ${mcount}`;
-                            await sendWithGif(api, event, msg + timeFooter(), 'wave');
+                                ? `👢 ${name} ᴋɪᴄᴋᴇᴅ\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ`
+                                : `🌸 ꜱᴀʏᴏɴᴀʀᴀ ${name}\n💔 ɢᴏᴏᴅʙʏᴇ\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ`;
+                            await sendAdvancedGif(api, event, msg + timeFooter(), 'sayonara');
                         });
                     } catch (e) {}
                 }
@@ -287,27 +284,23 @@ login({ appState }, (err, api) => {
                 if (db.afk?.[event.senderID]) {
                     delete db.afk[event.senderID];
                     saveDB(db);
-                    await sleep(SLOW_MODE.afkDelay);
                     api.sendMessage(`✅ ᴡᴇʟᴄᴏᴍᴇ ʙᴀᴄᴋ!${timeFooter()}`, tid);
                 }
 
-                // Protections (Owner + Bot Admin bypass)
-                if (!isOwner && !isBotAdmin) {
-                    if (grp.antiLink && /(https?:\/\/|www\.|\.com|\.net)/gi.test(event.body) && !isAdmin) {
+                // Protections
+                if (!isOwner && !isBotAdmin && !isAdmin) {
+                    if (grp.antiLink && /(https?:\/\/|www\.|\.com|\.net)/gi.test(event.body)) {
                         api.unsendMessage(event.messageID);
-                        await sleep(SLOW_MODE.responseDelay);
                         api.sendMessage(`🔗 ʟɪɴᴋꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
                         return;
                     }
-                    if (grp.antiGali && /(madarchod|bhenchod|fuck|shit|bastard|harami)/gi.test(event.body) && !isAdmin) {
+                    if (grp.antiGali && /(madarchod|bhenchod|fuck|shit|bastard|harami)/gi.test(event.body)) {
                         api.unsendMessage(event.messageID);
-                        await sleep(SLOW_MODE.responseDelay);
                         api.sendMessage(`🤬 ʙᴀᴅ ᴡᴏʀᴅꜱ!${timeFooter()}`, tid);
                         return;
                     }
-                    if (grp.antiPhone && /(\+?880|01[3-9])\d{8,9}/g.test(event.body) && !isAdmin) {
+                    if (grp.antiPhone && /(\+?880|01[3-9])\d{8,9}/g.test(event.body)) {
                         api.unsendMessage(event.messageID);
-                        await sleep(SLOW_MODE.responseDelay);
                         api.sendMessage(`📱 ᴘʜᴏɴᴇ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
                         return;
                     }
@@ -318,30 +311,25 @@ login({ appState }, (err, api) => {
                     for (const att of event.attachments) {
                         if (grp.antiSticker && att.type === "sticker") {
                             api.unsendMessage(event.messageID);
-                            await sleep(SLOW_MODE.responseDelay);
-                            api.sendMessage(`🎨 ꜱᴛɪᴄᴋᴇʀꜱ!${timeFooter()}`, tid);
+                            api.sendMessage(`🎨 ꜱᴛɪᴄᴋᴇʀꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
                         }
                         if (grp.antiGif && att.type === "animated_image") {
                             api.unsendMessage(event.messageID);
-                            await sleep(SLOW_MODE.responseDelay);
-                            api.sendMessage(`🎬 ɢɪꜰꜱ!${timeFooter()}`, tid);
+                            api.sendMessage(`🎬 ɢɪꜰꜱ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
                         }
                     }
                 }
 
-                // Only Admin
                 if (sec.onlyAdmin && !isAdmin) {
                     api.removeUserFromGroup(event.senderID, tid, () => {});
                     return;
                 }
 
-                // All Mute
                 if (sec.allMute && !isAdmin && !msg.startsWith(config.prefix)) {
                     api.unsendMessage(event.messageID);
                     return;
                 }
 
-                // Slow Mode
                 const slow = grp.slowMode || 0;
                 if (slow > 0 && !isAdmin) {
                     if (lastMsg[tid] && Date.now() - lastMsg[tid] < slow * 1000) {
@@ -351,40 +339,42 @@ login({ appState }, (err, api) => {
                     lastMsg[tid] = Date.now();
                 }
 
-                // Bot Active
+                // ==================== BOT ACTIVE ====================
                 if (msg.toLowerCase() === "bot active" || msg.toLowerCase() === "bot") {
                     const secCount = Object.keys(sec).filter(k => sec[k] === true).length;
-                    return api.sendMessage(`💀 ${config.botName} ɪꜱ ᴀᴄᴛɪᴠᴇ ✅\n🛡️ ꜱᴇᴄᴜʀɪᴛʏ: ${secCount} ᴀᴄᴛɪᴠᴇ${timeFooter()}`, tid);
+                    return api.sendMessage(`💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ ɪꜱ ᴀᴄᴛɪᴠᴇ ✅\n🛡️ ꜱᴇᴄᴜʀɪᴛʏ: ${secCount} ᴀᴄᴛɪᴠᴇ${timeFooter()}`, tid);
                 }
 
-                // ==================== COMMAND PROCESSING ====================
+                // ==================== COMMAND PROCESSING (একবারই!) ====================
                 if (msg.startsWith(config.prefix)) {
                     const args = msg.slice(config.prefix.length).split(' ');
                     const cmd = args.shift().toLowerCase();
 
-                    // Per-Group Throttle
+                    // Group Throttle
                     if (isGroupThrottled(tid) && !isOwner) {
                         return;
                     }
 
+                    // Command Check
                     if (commands[cmd]) {
-                        console.log(`✅ Command: ${cmd}`);
+                        console.log(`✅ Command: ${cmd} | Role: ${senderRole}`);
                         await sleep(SLOW_MODE.typingDelay);
                         api.sendTypingIndicator(tid, () => {});
                         setTimeout(() => {
                             try {
                                 commands[cmd](api, event, args, config);
                             } catch (e) {
-                                console.error(`❌ ${cmd}:`, e.message);
+                                console.error(`❌ ${cmd} error:`, e.message);
                             }
                         }, SLOW_MODE.commandDelay);
                     } else {
+                        // শুধু একবার "not found" পাঠাবে
+                        console.log(`❌ Command not found: ${cmd}`);
                         await sleep(SLOW_MODE.responseDelay);
-                        api.sendMessage(`❌ ᴄᴏᴍᴍᴀɴᴅ ɴᴏᴛ ꜰᴏᴜɴᴅ: ${cmd}${timeFooter()}`, tid);
+                        api.sendMessage(`❌ ᴄᴏᴍᴍᴀɴᴅ ɴᴏᴛ ꜰᴏᴜɴᴅ: ${cmd}\n📖 ᴛʏᴘᴇ /help${timeFooter()}`, tid);
                     }
                 }
             }
-
         } catch (err) {
             console.error("Event Error:", err.message);
         }
@@ -397,10 +387,8 @@ setInterval(async () => {
         if (!global.globalBotApi) return;
         const db = getDB();
         if (!db.security) return;
-
         const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
         const now = Date.now();
-
         for (const tid in db.security) {
             if (!db.security[tid].autoKick) continue;
             global.globalBotApi.getThreadInfo(tid, async (err, info) => {
@@ -412,9 +400,7 @@ setInterval(async () => {
                     const u = db.users?.[mid];
                     if (!u || !u.lastActive) continue;
                     if (now - u.lastActive > SEVEN_DAYS) {
-                        global.globalBotApi.removeUserFromGroup(mid, tid, () => {
-                            console.log(`[Auto-Kick] ${mid} from ${tid}`);
-                        });
+                        global.globalBotApi.removeUserFromGroup(mid, tid, () => {});
                     }
                 }
             });
@@ -422,21 +408,21 @@ setInterval(async () => {
     } catch (e) {}
 }, 24 * 60 * 60 * 1000);
 
-// ==================== 🌐 HEALTH SERVER ====================
+// ==================== HEALTH SERVER ====================
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end(`💀 ${config.botName} 24/7\nUptime: ${Math.floor(process.uptime())}s`);
+    res.end(`💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌 24/7\nUptime: ${Math.floor(process.uptime())}s`);
 }).listen(PORT, '0.0.0.0', () => {
     console.log(`🌐 Health server on port ${PORT}`);
 });
 
-// ==================== 🔄 SELF-PING ====================
+// ==================== SELF-PING ====================
 const RENDER_URL = process.env.RENDER_URL || "https://destroy-k66o.onrender.com";
 setInterval(async () => {
     try { await axios.get(RENDER_URL); } catch (e) {}
 }, 4 * 60 * 1000);
 
-// ==================== 🛡️ ERROR HANDLERS ====================
+// ==================== ERROR HANDLERS ====================
 process.on('uncaughtException', (err) => console.error("Uncaught:", err.message));
 process.on('unhandledRejection', (err) => console.error("Unhandled:", err));

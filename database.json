@@ -1,13 +1,75 @@
 {
-    "groups": {},
-    "users": {},
-    "roles": {},
-    "warnings": {},
-    "blacklist": {},
-    "security": {},
-    "afk": {},
-    "settings": {
-        "lastNotifiedVersion": "V1.0",
-        "lastNotifiedAt": 0
+  "groups": {
+    "1023835213991536": {
+      "firstSeen": 1790326565820,
+      "lastSeen": 1790326866725,
+      "name": "Unknown"
+    },
+    "902413072587606": {
+      "firstSeen": 1790326620903,
+      "lastSeen": 1790327141430,
+      "name": "Unknown"
+    },
+    "2123911331473921": {
+      "firstSeen": 1790326700923,
+      "lastSeen": 1790326896757,
+      "name": "Unknown"
+    },
+    "4629715110683132": {
+      "firstSeen": 1790326811065,
+      "lastSeen": 1790326860656,
+      "name": "Unknown"
     }
+  },
+  "users": {
+    "61577562306224": {
+      "points": 10,
+      "coins": 0,
+      "lastActive": 1790327141430
+    },
+    "100063581754712": {
+      "points": 3,
+      "coins": 0,
+      "lastActive": 1790326719055
+    },
+    "61593553472334": {
+      "points": 2,
+      "coins": 0,
+      "lastActive": 1790326896757
+    },
+    "61579004596835": {
+      "points": 1,
+      "coins": 0,
+      "lastActive": 1790326733581
+    },
+    "61578484832509": {
+      "points": 1,
+      "coins": 0,
+      "lastActive": 1790326811066
+    },
+    "61578597747875": {
+      "points": 2,
+      "coins": 0,
+      "lastActive": 1790326866726
+    },
+    "61566972146883": {
+      "points": 1,
+      "coins": 0,
+      "lastActive": 1790326817223
+    },
+    "61564673202288": {
+      "points": 1,
+      "coins": 0,
+      "lastActive": 1790326819342
+    }
+  },
+  "roles": {},
+  "warnings": {},
+  "blacklist": {},
+  "security": {},
+  "afk": {},
+  "settings": {
+    "lastNotifiedVersion": "V2.0",
+    "lastNotifiedAt": 1790326584051
+  }
 }

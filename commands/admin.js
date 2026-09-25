@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { getDB, saveDB, timeFooter, hasPermission, permissionDenied, getUserRole } = require('../utils');
+const { getDB, saveDB, timeFooter, hasPermission, permissionDenied, getUserRole, SLOW_MODE, sleep } = require('../utils');
 
 module.exports = {
 
@@ -9,6 +9,9 @@ module.exports = {
         const t = Object.keys(event.mentions || {})[0];
         if (!t) return api.sendMessage("ᴜꜱᴀɢᴇ: /kick @ᴜꜱᴇʀ" + timeFooter(), event.threadID);
         const reason = args.filter(a => !a.startsWith('@')).join(" ") || "ɴᴏ ʀᴇᴀꜱᴏɴ";
+        
+        await sleep(1000);
+        
         try {
             const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
             const botID = api.getCurrentUserID();
@@ -16,6 +19,7 @@ module.exports = {
                 return api.sendMessage("❌ ʙᴏᴛ ɪꜱ ɴᴏᴛ ᴀᴅᴍɪɴ!" + timeFooter(), event.threadID);
             }
         } catch (e) {}
+        
         api.removeUserFromGroup(t, event.threadID, (err) => {
             if (err) return api.sendMessage("❌ ꜰᴀɪʟᴇᴅ." + timeFooter(), event.threadID);
             api.sendMessage(`👢 ᴜꜱᴇʀ ᴋɪᴄᴋᴇᴅ\n📝 ʀᴇᴀꜱᴏɴ: ${reason}${timeFooter()}`, event.threadID);
@@ -32,7 +36,7 @@ module.exports = {
         db.blacklist[event.threadID].push(t);
         saveDB(db);
         api.removeUserFromGroup(t, event.threadID, () => {
-            api.sendMessage(`🚫 ᴜꜱᴇʀ ʙᴀɴɴᴇᴅ${timeFooter()}`, event.threadID);
+            api.sendMessage(`🚫 ᴜꜱᴇʀ ʙᴀɴɴᴇᴅ & ʀᴇᴍᴏᴠᴇᴅ${timeFooter()}`, event.threadID);
         });
     },
 
@@ -106,7 +110,7 @@ module.exports = {
         }
     },
 
-    // ==================== WARnLIST ====================
+    // ==================== WARNLIST ====================
     warnlist: async (api, event, args, config) => {
         if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
         const db = getDB();
@@ -120,7 +124,7 @@ module.exports = {
         api.sendMessage(msg + timeFooter(), event.threadID);
     },
 
-    // ==================== LOCKNAME (FIXED) ====================
+    // ==================== LOCKNAME ====================
     lockname: async (api, event, args, config) => {
         if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
         
@@ -130,11 +134,8 @@ module.exports = {
         const isOn = args[0] === "on";
         db.groups[event.threadID].lockName = isOn;
 
-        // ✅ নাম লক করার সময় বর্তমান নাম সেভ করুন (Retry সহ)
         if (isOn) {
             let savedName = null;
-            
-            // ৩ বার চেষ্টা করুন
             for (let i = 0; i < 3; i++) {
                 try {
                     const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
@@ -142,7 +143,7 @@ module.exports = {
                         savedName = info.threadName;
                         break;
                     }
-                    await new Promise(r => setTimeout(r, 1000));
+                    await sleep(1000);
                 } catch (e) {}
             }
 
@@ -151,15 +152,14 @@ module.exports = {
                 db.groups[event.threadID].name = savedName;
                 console.log(`🔒 Locked name saved: ${savedName}`);
             } else {
-                console.log(`⚠️ Could not fetch group name. Try again.`);
-                return api.sendMessage(`⚠️ ᴜɴᴀʙʟᴇ ᴛᴏ ꜰᴇᴛᴄʜ ɢʀᴏᴜᴘ ɴᴀᴍᴇ!\n📌 ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ${timeFooter()}`, event.threadID);
+                return api.sendMessage(`⚠️ ᴜɴᴀʙʟᴇ ᴛᴏ ꜰᴇᴛᴄʜ ɴᴀᴍᴇ!\n📌 ᴘʟᴇᴀꜱᴇ ᴛʀʏ ᴀɢᴀɪɴ${timeFooter()}`, event.threadID);
             }
         }
 
         saveDB(db);
         const savedName = db.groups[event.threadID].lockedName || "Not set";
         api.sendMessage(
-            `🔒 ʟᴏᴄᴋ ɴᴀᴍᴇ: ${isOn ? "ON ✅" : "OFF ❌"}\n📌 ꜱᴀᴠᴇᴅ ɴᴀᴍᴇ: ${savedName}${timeFooter()}`,
+            `🔒 ʟᴏᴄᴋ ɴᴀᴍᴇ: ${isOn ? "ON ✅" : "OFF ❌"}\n📌 ꜱᴀᴠᴇᴅ: ${savedName}${timeFooter()}`,
             event.threadID
         );
     },
@@ -198,7 +198,7 @@ module.exports = {
             await new Promise(resolve => {
                 api.changeNickname(nick, event.threadID, id, (err) => {
                     if (err) fail++; else ok++;
-                    setTimeout(resolve, 300);
+                    setTimeout(resolve, SLOW_MODE.massActionDelay);
                 });
             });
         }

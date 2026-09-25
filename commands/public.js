@@ -1,31 +1,13 @@
 const axios = require('axios');
-const { getDB, saveDB, timeFooter, sendWithGif, fetchAnimeGif, guessGender } = require('../utils');
+const { getDB, saveDB, timeFooter, sendWithGif, fetchAnimeGif, guessGender, sendAdvancedGif } = require('../utils');
 
 module.exports = {
 
-    register: async (api, event, args, config) => {
-        try {
-            const db = getDB();
-            if (!db.groups) db.groups = {};
-            if (!db.groups[event.threadID]) {
-                db.groups[event.threadID] = {
-                    firstSeen: Date.now(),
-                    lastSeen: Date.now(),
-                    name: event.threadName || "Unknown"
-                };
-                saveDB(db);
-                api.sendMessage(`✅ ᴛʜɪꜱ ɢʀᴏᴜᴘ ʀᴇɢɪꜱᴛᴇʀᴇᴅ!\n🆔 ${event.threadID}${timeFooter()}`, event.threadID);
-            } else {
-                api.sendMessage(`ℹ️ ᴀʟʀᴇᴀᴅʏ ʀᴇɢɪꜱᴛᴇʀᴇᴅ!${timeFooter()}`, event.threadID);
-            }
-        } catch (e) {
-            api.sendMessage("❌ ꜰᴀɪʟᴇᴅ" + timeFooter(), event.threadID);
-        }
-    },
-
+    // ==================== HELP ====================
     help: async (api, event, args, config) => {
         const msg = `╔══════════════════════════════╗
-   💀 DEAD DESTROYER - HELP
+   💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌
+        HELP MENU
 ╚══════════════════════════════╝
 
 📖 ᴘᴀɢᴇ 1 - ᴍᴇᴍʙᴇʀ
@@ -36,64 +18,78 @@ module.exports = {
 ᴜꜱᴇ: /page1 /page2 /page3 /page4
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-ʀᴏʟᴇꜱ: ᴘᴜʙʟɪᴄ < ᴍᴏᴅ < ɢʀᴏᴜᴘᴀᴅᴍɪɴ < ʙᴏᴛᴀᴅᴍɪɴ < ᴏᴡɴᴇʀ${timeFooter()}`;
-        await sendWithGif(api, event, msg, 'wave');
+👨‍💻 ᴅᴇᴠ: ${config.developer}
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌${timeFooter()}`;
+        await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
     page1: async (api, event) => {
         const msg = `📖 PAGE 1 - MEMBER
 ━━━━━━━━━━━━━━━━━━━━━━━━
-/help /page1-4 /ping /uid /owner
-/botinfo /groupinfo /rules /rank
-/leaderboard /afk /pair /ship
-/aura /meme /8ball /ai /register${timeFooter()}`;
-        await sendWithGif(api, event, msg, 'wave');
+/help  /page1-4  /ping  /uid
+/owner  /botinfo  /groupinfo
+/rules  /rank  /leaderboard
+/afk  /balance  /daily  /top
+/pair  /ship  /meme  /8ball
+/say  /poll  /vid
+
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌${timeFooter()}`;
+        await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
     page2: async (api, event) => {
         const msg = `📖 PAGE 2 - FUN + PRANK
 ━━━━━━━━━━━━━━━━━━━━━━━━
-/vid /say /poll /info /stalk
-/weather /tagall /tagadmin /members
-/adminlist /roles /roleinfo
-/crack /trace /fbi /darkweb
-/expose /bankhack /camera
-/gallery /callhack /ddos /hack
+/stalk  /info  /weather
+/crack  /trace  /fbi  /hack
+/darkweb  /expose  /bankhack
+/camera  /gallery  /callhack
+/ddos
 
-⚠️ ᴀʟʟ ᴘʀᴀɴᴋ 100% ꜰᴀᴋᴇ${timeFooter()}`;
-        await sendWithGif(api, event, msg, 'wave');
+⚠️ ᴀʟʟ ᴘʀᴀɴᴋꜱ 100% ꜰᴀᴋᴇ
+
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ${timeFooter()}`;
+        await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
     page3: async (api, event) => {
         const msg = `📖 PAGE 3 - GROUP ADMIN
 ━━━━━━━━━━━━━━━━━━━━━━━━
-/kick /ban /unban /setrole
-/removerole /setrules /warn
-/warnlist /lockname /lockphoto
-/locknick /massnick /autonick
-/resetnick /antlink /antigali
-/antisticker /antigif /antiphone
-/blacklist /slowmode${timeFooter()}`;
-        await sendWithGif(api, event, msg, 'wave');
+/kick  /ban  /unban
+/setrole  /removerole
+/setrules  /warn  /warnlist
+/lockname  /lockphoto  /locknick
+/massnick  /autonick  /resetnick
+/antlink  /antigali
+/antisticker  /antigif  /antiphone
+/blacklist  /slowmode
+
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ${timeFooter()}`;
+        await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
     page4: async (api, event) => {
         const msg = `📖 PAGE 4 - BRUTAL SECURITY
 ━━━━━━━━━━━━━━━━━━━━━━━━
-/antibot /botscan /botkill /antiraid
-/allmute /allunmute /lockall /unlockall
-/shield /onlyadmin /onlymod /botlock
-/botoff /boton /botlocklist
-/addadmin /removeadmin /restart
-/maintenance /status /active /topignore
-/welcome set /goodbye set
+/security  /war
+/antibot  /botscan  /botkill
+/antiraid  /allmute  /allunmute
+/lockall  /unlockall  /shield
+/onlyadmin  /onlymod  /botlock
+/botoff  /boton  /botlocklist
+/addadmin  /removeadmin
+/restart  /maintenance
+/status  /active  /topignore
+/welcome  /goodbye  /notify
+/broadcast  /grouplist  /clearcache
+/bothunt  /botdestroyer  /sayonara
+/ainfo  /antibotauto  /sinfo  /sstatus
 
-🔥 MASTER:
-/security on/off
-/war on/off${timeFooter()}`;
-        await sendWithGif(api, event, msg, 'wave');
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ${timeFooter()}`;
+        await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
+    // ==================== CORE ====================
     ping: (api, event) => {
         const start = Date.now();
         api.sendMessage("🏓 ᴘᴏɴɢ", event.threadID, () => {
@@ -115,7 +111,7 @@ module.exports = {
     },
 
     owner: async (api, event, args, config) => {
-        const msg = `👑 ᴏᴡɴᴇʀ ɪɴꜰᴏ
+        const msg = `👑 𝐎𝐖𝐍𝐄𝐑 𝐈𝐍𝐅𝐎
 ━━━━━━━━━━━━━━━━━━━━━━━━
 👤 Ariyan Shihab
 🌹 কীট গোলাপ
@@ -124,41 +120,98 @@ module.exports = {
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📘 https://facebook.com/mdshihabofc
 💬 https://m.me/mdshihabofc
-━━━━━━━━━━━━━━━━━━━━━━━━${timeFooter()}`;
-        await sendWithGif(api, event, msg, 'smile');
+━━━━━━━━━━━━━━━━━━━━━━━━
+💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ${timeFooter()}`;
+        await sendAdvancedGif(api, event, msg, 'itachi');
     },
 
     botinfo: (api, event, args, config) => {
         const up = process.uptime();
         const h = Math.floor(up / 3600), m = Math.floor((up % 3600) / 60);
-        const msg = `💀 ʙᴏᴛ ɪɴꜰᴏ
+        const msg = `💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄ᴍ ɪɴꜰᴏ
 ━━━━━━━━━━━━━━━━━━━━━━━━
-🤖 ${config.botName}
+🤖 ɴᴀᴍᴇ: ${config.botName}
 ⚙️ ᴠᴇʀꜱɪᴏɴ: ${config.version}
-📦 ᴄᴏᴍᴍᴀɴᴅꜱ: 92
+📦 ᴄᴏᴍᴍᴀɴᴅꜱ: 90+
 ⏱️ ᴜᴘᴛɪᴍᴇ: ${h}ʜ ${m}ᴍ
-🛠️ ᴅᴇᴠ: ${config.developer}${timeFooter()}`;
+🛠️ ᴅᴇᴠ: ${config.developer}
+━━━━━━━━━━━━━━━━━━━━━━━━${timeFooter()}`;
         api.sendMessage(msg, event.threadID);
     },
 
     groupinfo: async (api, event) => {
         api.getThreadInfo(event.threadID, (err, info) => {
             if (err) return;
-            api.sendMessage(`📊 ɢʀᴏᴜᴘ ɪɴꜰᴏ
+            api.sendMessage(`📊 𝐆𝐑𝐎𝐔𝐏 𝐈𝐍𝐅𝐎
 ━━━━━━━━━━━━━━━━━━━━━━━━
-📌 ${info.threadName}
-👥 ${info.participantIDs.length} ᴍᴇᴍʙᴇʀꜱ
-👑 ${info.adminIDs.length} ᴀᴅᴍɪɴꜱ
-🆔 ${event.threadID}${timeFooter()}`, event.threadID);
+📌 ɴᴀᴍᴇ: ${info.threadName}
+👥 ᴍᴇᴍʙᴇʀꜱ: ${info.participantIDs.length}
+👑 ᴀᴅᴍɪɴꜱ: ${info.adminIDs.length}
+🆔 ɪᴅ: ${event.threadID}${timeFooter()}`, event.threadID);
         });
     },
 
     rules: (api, event) => {
         const db = getDB();
         const rules = db.groups[event.threadID]?.rules || "ɴᴏ ʀᴜʟᴇꜱ ꜱᴇᴛ";
-        api.sendMessage(`📜 ɢʀᴏᴜᴘ ʀᴜʟᴇꜱ\n━━━━━━━━━━━━━━━━━━━━━━━━\n${rules}${timeFooter()}`, event.threadID);
+        api.sendMessage(`📜 𝐆𝐑𝐎𝐔𝐏 𝐑𝐔𝐋𝐄𝐒\n━━━━━━━━━━━━━━━━━━━━━━━━\n${rules}${timeFooter()}`, event.threadID);
     },
 
+    rank: (api, event) => {
+        const db = getDB();
+        const user = db.users?.[event.senderID] || { points: 0 };
+        api.sendMessage(`🏅 𝐘𝐎𝐔𝐑 𝐑𝐀𝐍𝐊\n━━━━━━━━━━━━━━━━━━━━━━━━\n👤 ᴘᴏɪɴᴛꜱ: ${user.points || 0}${timeFooter()}`, event.threadID);
+    },
+
+    leaderboard: (api, event) => {
+        const db = getDB();
+        const users = Object.entries(db.users || {}).sort((a, b) => (b[1].points || 0) - (a[1].points || 0)).slice(0, 10);
+        let msg = "🏆 𝐋𝐄𝐀𝐃𝐄𝐑𝐁𝐎𝐀𝐑𝐃\n━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        users.forEach((u, i) => { msg += `${i + 1}. ${u[0]}: ${u[1].points || 0}\n`; });
+        api.sendMessage(msg + timeFooter(), event.threadID);
+    },
+
+    afk: async (api, event, args) => {
+        const db = getDB();
+        if (!db.afk) db.afk = {};
+        const reason = args.join(" ") || "AFK";
+        db.afk[event.senderID] = { reason, time: Date.now() };
+        saveDB(db);
+        api.sendMessage(`💤 𝐀𝐅𝐊 ᴀᴄᴛɪᴠᴀᴛᴇᴅ\n📝 ʀᴇᴀꜱᴏɴ: ${reason}${timeFooter()}`, event.threadID);
+    },
+
+    // ==================== ECONOMY ====================
+    balance: (api, event) => {
+        const db = getDB();
+        const user = db.users?.[event.senderID] || { coins: 0 };
+        api.sendMessage(`💰 𝐘𝐎𝐔𝐑 𝐁𝐀𝐋𝐀𝐍𝐂𝐄\n━━━━━━━━━━━━━━━━━━━━━━━━\n💎 ᴄᴏɪɴꜱ: ${user.coins || 0}${timeFooter()}`, event.threadID);
+    },
+
+    daily: async (api, event) => {
+        const db = getDB();
+        if (!db.users) db.users = {};
+        if (!db.users[event.senderID]) db.users[event.senderID] = { coins: 0, lastDaily: 0 };
+        const now = Date.now();
+        const oneDay = 24 * 60 * 60 * 1000;
+        if (now - (db.users[event.senderID].lastDaily || 0) < oneDay) {
+            const rem = Math.ceil((oneDay - (now - db.users[event.senderID].lastDaily)) / 3600000);
+            return api.sendMessage(`⏳ ᴛʀʏ ᴀɢᴀɪɴ ɪɴ ${rem}ʜ${timeFooter()}`, event.threadID);
+        }
+        db.users[event.senderID].lastDaily = now;
+        db.users[event.senderID].coins = (db.users[event.senderID].coins || 0) + 500;
+        saveDB(db);
+        api.sendMessage(`✅ ᴄʟᴀɪᴍᴇᴅ 500 ᴄᴏɪɴꜱ!\n💰 ᴛᴏᴛᴀʟ: ${db.users[event.senderID].coins}${timeFooter()}`, event.threadID);
+    },
+
+    top: (api, event) => {
+        const db = getDB();
+        const users = Object.entries(db.users || {}).sort((a, b) => (b[1].coins || 0) - (a[1].coins || 0)).slice(0, 5);
+        let msg = "🏆 𝐓𝐎𝐏 𝐑𝐈𝐂𝐇\n━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        users.forEach((u, i) => { msg += `${i + 1}. ${u[0]}: ${u[1].coins || 0} 💎\n`; });
+        api.sendMessage(msg + timeFooter(), event.threadID);
+    },
+
+    // ==================== FUN ====================
     pair: async (api, event) => {
         try {
             const db = getDB();
@@ -189,7 +242,7 @@ module.exports = {
 
             const sG = genders[sid];
             const sInfo = await new Promise(r => api.getUserInfo(sid, (e, ret) => r(e ? { name: "You" } : ret[sid])));
-            if (!sG) return api.sendMessage("⚠️ Cannot detect gender. Use /setrole" + timeFooter(), tid);
+            if (!sG) return api.sendMessage("⚠️ Cannot detect gender" + timeFooter(), tid);
 
             const partnerList = (sG === "male") ? females.filter(id => id !== sid) : males.filter(id => id !== sid);
             if (partnerList.length === 0) return api.sendMessage(`⚠️ No ${sG === "male" ? "girls" : "boys"}!${timeFooter()}`, tid);
@@ -200,21 +253,20 @@ module.exports = {
 
             const e1 = sG === "male" ? "👦" : "👧";
             const e2 = sG === "male" ? "👧" : "👦";
-            const msg = `💕 Matchmaking Complete 💕
+            const msg = `💕 𝐌𝐀𝐓𝐂𝐇𝐌𝐀𝐊𝐈𝐍𝐆 💕
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ${e1} ${sInfo.name}
        ❤️
 ${e2} ${pInfo.name}
 ━━━━━━━━━━━━━━━━━━━━━━━━
-💖 Compatibility: ${comp}%
-${comp >= 90 ? "🔥 PERFECT MATCH!" : comp >= 75 ? "💕 GREAT MATCH!" : "💖 GOOD MATCH!"}${timeFooter()}`;
+💖 ᴄᴏᴍᴘᴀᴛɪʙɪʟɪᴛʏ: ${comp}%
+${comp >= 90 ? "🔥 ᴘᴇʀꜰᴇᴄᴛ ᴍᴀᴛᴄʜ!" : comp >= 75 ? "💕 ɢʀᴇᴀᴛ ᴍᴀᴛᴄʜ!" : "💖 ɢᴏᴏᴅ ᴍᴀᴛᴄʜ!"}${timeFooter()}`;
 
-            await sendWithGif(api, event, msg, 'cuddle', [
+            await sendAdvancedGif(api, event, msg, 'love', [
                 { tag: sInfo.name, id: sid },
                 { tag: pInfo.name, id: partner }
             ]);
         } catch (e) {
-            console.error(e);
             api.sendMessage("❌ Pair failed" + timeFooter(), event.threadID);
         }
     },
@@ -236,117 +288,12 @@ ${comp >= 90 ? "🔥 PERFECT MATCH!" : comp >= 75 ? "💕 GREAT MATCH!" : "💖 
             n1 = i1.name; n2 = i2.name;
         }
         const p = Math.floor(Math.random() * 41) + 60;
-        const msg = `💘 Love Calculator 💘
+        const msg = `💘 𝐋𝐎𝐕𝐄 𝐂𝐀𝐋𝐂𝐔𝐋𝐀𝐓𝐎𝐑 💘
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ❤️ ${n1} + 💙 ${n2}
 ━━━━━━━━━━━━━━━━━━━━━━━━
-💕 Love: ${p}%${timeFooter()}`;
-        await sendWithGif(api, event, msg, 'kiss');
-    },
-
-    tagall: async (api, event, args, config) => {
-        const { hasPermission, permissionDenied } = require('../utils');
-        if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
-        const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-        if (!info) return;
-        const members = info.participantIDs.filter(id => id !== api.getCurrentUserID());
-        const mentions = [];
-        let body = "📢 Attention Everyone\n━━━━━━━━━━━━━━━━━━━━━━━━\n";
-        for (const m of members) {
-            const u = await new Promise(r => api.getUserInfo(m, (e, ret) => r(e ? { name: "Unknown" } : ret[m])));
-            body += `@${u.name} `;
-            mentions.push({ tag: u.name, id: m });
-        }
-        body += `\n━━━━━━━━━━━━━━━━━━━━━━━━\n👥 Total: ${info.participantIDs.length}${timeFooter()}`;
-        api.sendMessage({ body, mentions }, event.threadID);
-    },
-
-    tagadmin: async (api, event, args, config) => {
-        const { hasPermission, permissionDenied } = require('../utils');
-        if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
-        const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-        if (!info) return;
-        const mentions = [];
-        let body = "👑 Attention Admins\n━━━━━━━━━━━━━━━━━━━━━━━━\n";
-        for (const a of info.adminIDs) {
-            const u = await new Promise(r => api.getUserInfo(a.id, (e, ret) => r(e ? { name: "Unknown" } : ret[a.id])));
-            body += `@${u.name} `;
-            mentions.push({ tag: u.name, id: a.id });
-        }
-        body += timeFooter();
-        api.sendMessage({ body, mentions }, event.threadID);
-    },
-
-    members: async (api, event) => {
-        api.getThreadInfo(event.threadID, (err, info) => {
-            if (err) return;
-            api.sendMessage(`👥 Total members: ${info.participantIDs.length}${timeFooter()}`, event.threadID);
-        });
-    },
-
-    adminlist: async (api, event, args, config) => {
-        const { hasPermission, permissionDenied } = require('../utils');
-        if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
-        const info = await new Promise(r => api.getThreadInfo(event.threadID, (e, i) => r(e ? null : i)));
-        if (!info) return;
-        const mentions = [];
-        let body = "👑 Admin List\n━━━━━━━━━━━━━━━━━━━━━━━━\n";
-        for (const a of info.adminIDs) {
-            const u = await new Promise(r => api.getUserInfo(a.id, (e, ret) => r(e ? { name: "Unknown" } : ret[a.id])));
-            body += `👑 @${u.name}\n`;
-            mentions.push({ tag: u.name, id: a.id });
-        }
-        body += timeFooter();
-        api.sendMessage({ body, mentions }, event.threadID);
-    },
-
-    roles: async (api, event, args, config) => {
-        const { hasPermission, permissionDenied } = require('../utils');
-        if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
-        const db = getDB();
-        const roles = db.roles[event.threadID] || {};
-        let msg = "👥 Roles\n━━━━━━━━━━━━━━━━━━━━━━━━\n";
-        for (const uid in roles) {
-            const u = await new Promise(r => api.getUserInfo(uid, (e, ret) => r(e ? { name: "Unknown" } : ret[uid])));
-            msg += `👤 ${u.name} → ${roles[uid]}\n`;
-        }
-        if (Object.keys(roles).length === 0) msg += "No custom roles";
-        api.sendMessage(msg + timeFooter(), event.threadID);
-    },
-
-    roleinfo: async (api, event, args, config) => {
-        const t = Object.keys(event.mentions || {})[0] || event.senderID;
-        const db = getDB();
-        const role = db.roles[event.threadID]?.[t] || "public";
-        const u = await new Promise(r => api.getUserInfo(t, (e, ret) => r(e ? { name: "Unknown" } : ret[t])));
-        api.sendMessage(`👤 ${u.name}\n🎭 Role: ${role}${timeFooter()}`, event.threadID);
-    },
-
-    say: async (api, event, args, config) => {
-        const { hasPermission, permissionDenied } = require('../utils');
-        if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
-        const m = args.join(" ");
-        if (!m) return api.sendMessage("Usage: /say [text]" + timeFooter(), event.threadID);
-        api.sendMessage(m, event.threadID);
-    },
-
-    poll: async (api, event, args) => {
-        const q = args.join(" ") || "Your opinion?";
-        api.sendMessage(`📊 Poll\n━━━━━━━━━━━━━━━━━━━━━━━━\n❓ ${q}\n\n👍 Yes\n👎 No${timeFooter()}`, event.threadID);
-    },
-
-    afk: async (api, event, args) => {
-        const db = getDB();
-        if (!db.afk) db.afk = {};
-        const reason = args.join(" ") || "AFK";
-        db.afk[event.senderID] = { reason, time: Date.now() };
-        saveDB(db);
-        api.sendMessage(`💤 AFK activated\n📝 Reason: ${reason}${timeFooter()}`, event.threadID);
-    },
-
-    aura: (api, event) => {
-        const aura = Math.floor(Math.random() * 1000) + 500;
-        api.sendMessage(`✨ Aura Check ✨\n━━━━━━━━━━━━━━━━━━━━━━━━\n🔮 ${aura}\n${aura > 1200 ? "🌟 MASSIVE AURA!" : "✨ DECENT AURA"}${timeFooter()}`, event.threadID);
+💕 ʟᴏᴠᴇ: ${p}%${timeFooter()}`;
+        await sendAdvancedGif(api, event, msg, 'love');
     },
 
     meme: async (api, event) => {
@@ -369,20 +316,11 @@ ${comp >= 90 ? "🔥 PERFECT MATCH!" : comp >= 75 ? "💕 GREAT MATCH!" : "💖 
         api.sendMessage(`🎱 Q: ${q}\nA: ${a}${timeFooter()}`, event.threadID);
     },
 
-    ai: async (api, event, args) => {
-        const q = args.join(" ");
-        if (!q) return api.sendMessage("Usage: /ai [query]" + timeFooter(), event.threadID);
-        try {
-            const res = await axios.get(`https://api.popcat.xyz/chatbot?msg=${encodeURIComponent(q)}&owner=SHIHAB&botname=DEAD+DESTROYER`, { timeout: 10000 });
-            api.sendMessage(`🤖 AI: ${res.data?.response || "No response"}${timeFooter()}`, event.threadID);
-        } catch (e) {
-            api.sendMessage("❌ AI failed" + timeFooter(), event.threadID);
-        }
-    },
-
-    vid: async (api, event, args) => {
-        if (!args[0]) return api.sendMessage("Usage: /vid [link]" + timeFooter(), event.threadID);
-        api.sendMessage("📥 Downloading video..." + timeFooter(), event.threadID);
+    // ==================== PRANK ====================
+    stalk: async (api, event) => {
+        const t = Object.keys(event.mentions || {})[0];
+        const name = t ? event.mentions[t].replace('@', '') : "user";
+        api.sendMessage(`🔍 ꜱᴛᴀʟᴋɪɴɢ ${name}...\n━━━━━━━━━━━━━━━━━━━━━━━━\n📍 ʟᴏᴄᴀᴛɪᴏɴ: ꜱᴇᴀʀᴄʜɪɴɢ...\n📱 ᴅᴇᴠɪᴄᴇ: ᴅᴇᴛᴇᴄᴛɪɴɢ...\n💻 ɪᴘ: ᴛʀᴀᴄɪɴɢ...\n\n⚠️ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
     },
 
     info: async (api, event, args) => {
@@ -390,7 +328,7 @@ ${comp >= 90 ? "🔥 PERFECT MATCH!" : comp >= 75 ? "💕 GREAT MATCH!" : "💖 
         if (!q) return api.sendMessage("Usage: /info [query]" + timeFooter(), event.threadID);
         try {
             const res = await axios.get(`https://api.popcat.xyz/wikipedia/${encodeURIComponent(q)}`, { timeout: 8000 });
-            const text = res.data?.text?.slice(0, 500) || "No info";
+            const text = res.data?.text?.slice(0, 400) || "Nᴏ ɪɴꜰᴏ";
             api.sendMessage(`📖 ${q}\n━━━━━━━━━━━━━━━━━━━━━━━━\n${text}...${timeFooter()}`, event.threadID);
         } catch (e) {
             api.sendMessage("❌ Info failed" + timeFooter(), event.threadID);
@@ -402,96 +340,95 @@ ${comp >= 90 ? "🔥 PERFECT MATCH!" : comp >= 75 ? "💕 GREAT MATCH!" : "💖 
         try {
             const res = await axios.get(`https://wttr.in/${city}?format=j1`, { timeout: 8000 });
             const c = res.data.current_condition[0];
-            api.sendMessage(`🌤️ Weather - ${city}\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌡️ ${c.temp_C}°C\n💧 ${c.humidity}%\n💨 ${c.windspeedKmph} km/h${timeFooter()}`, event.threadID);
+            api.sendMessage(`🌤️ ᴡᴇᴀᴛʜᴇʀ - ${city}\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌡️ ${c.temp_C}°C\n💧 ${c.humidity}%\n💨 ${c.windspeedKmph} km/h${timeFooter()}`, event.threadID);
         } catch (e) {
             api.sendMessage("❌ Weather failed" + timeFooter(), event.threadID);
         }
     },
 
-    stalk: async (api, event) => {
-        const t = Object.keys(event.mentions || {})[0];
-        const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`🔍 Stalking ${name}...\n━━━━━━━━━━━━━━━━━━━━━━━━\n📍 Location: Searching...\n📱 Device: Detecting...\n💻 IP: Tracing...\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
-    },
-
     crack: async (api, event) => {
         const t = Object.keys(event.mentions || {})[0];
         const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`💻 Cracking ${name}...\n[████████░░] 80%\n🔓 Bypassing...\n✅ PASSWORD: ********\n\n⚠️ PRANK - 100% FAKE${timeFooter()}`, event.threadID);
-    },
-
-    fbi: async (api, event) => {
-        const t = Object.keys(event.mentions || {})[0];
-        const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`🚔 FBI SEARCH\n🔍 Target: ${name}\n📁 Case: #${Math.floor(Math.random() * 999999)}\n🚨 FLAGGED\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
-    },
-
-    hack: async (api, event) => {
-        const t = Object.keys(event.mentions || {})[0];
-        const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`💻 Hacking ${name}...\n[██████░░░░] 60%\n🔓 Bypassing...\n✅ COMPLETE\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
+        api.sendMessage(`💻 ᴄʀᴀᴄᴋɪɴɢ ${name}...\n[████████░░] 80%\n🔓 Bypassing...\n✅ ᴘᴀꜱꜱᴡᴏʀᴅ: ********\n\n⚠️ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
     },
 
     trace: async (api, event) => {
         const t = Object.keys(event.mentions || {})[0];
         const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`📡 Tracing ${name}...\n🌍 IP: 192.***.***.***\n📍 Dhaka, BD\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
+        api.sendMessage(`📡 ᴛʀᴀᴄɪɴɢ ${name}...\n🌍 ɪᴘ: 192.***.***.***\n📍 ᴅʜᴀᴋᴀ, ʙᴅ\n\n⚠️ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
+    },
+
+    fbi: async (api, event) => {
+        const t = Object.keys(event.mentions || {})[0];
+        const name = t ? event.mentions[t].replace('@', '') : "user";
+        api.sendMessage(`🚔 ꜰʙɪ ꜱᴇᴀʀᴄʜ\n🔍 ᴛᴀʀɢᴇᴛ: ${name}\n📁 ᴄᴀꜱᴇ: #${Math.floor(Math.random() * 999999)}\n🚨 ꜰʟᴀɢɢᴇᴅ\n\n⚠️ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
+    },
+
+    hack: async (api, event) => {
+        const t = Object.keys(event.mentions || {})[0];
+        const name = t ? event.mentions[t].replace('@', '') : "user";
+        api.sendMessage(`💻 ʜᴀᴄᴋɪɴɢ ${name}...\n[██████░░░░] 60%\n🔓 Bypassing...\n✅ ᴄᴏᴍᴘʟᴇᴛᴇ\n\n⚠️ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
     },
 
     darkweb: async (api, event) => {
         const t = Object.keys(event.mentions || {})[0];
         const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`🌑 Dark Web Search\n🔍 ${name}\n🌐 Entering TOR...\n💀 Data: NOT FOUND\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
+        api.sendMessage(`🌑 ᴅᴀʀᴋ ᴡᴇʙ ꜱᴇᴀʀᴄʜ\n🔍 ${name}\n🌐 ᴇɴᴛᴇʀɪɴɢ ᴛᴏʀ...\n💀 ᴅᴀᴛᴀ: ɴᴏᴛ ꜰᴏᴜɴᴅ\n\n⚠️ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
     },
 
     expose: async (api, event) => {
         const t = Object.keys(event.mentions || {})[0];
         const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`😈 Exposing ${name}...\n🔍 Scanning...\n📸 Finding secrets...\n🚨 Nothing found!\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
+        api.sendMessage(`😈 ᴇxᴘᴏꜱɪɴɢ ${name}...\n🔍 ꜱᴄᴀɴɴɪɴɢ...\n📸 ꜰɪɴᴅɪɴɢ ꜱᴇᴄʀᴇᴛꜱ...\n🚨 ɴᴏᴛʜɪɴɢ ꜰᴏᴜɴᴅ!\n\n⚠️ ᴛʜɪꜱ ɪꜱ ᴀ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
     },
 
     bankhack: async (api, event) => {
         const t = Object.keys(event.mentions || {})[0];
         const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`🏦 Bank Hack - ${name}\n💳 ****${Math.floor(Math.random() * 9999)}\n💰 $${Math.floor(Math.random() * 99999)}\n🔓 DENIED\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
+        api.sendMessage(`🏦 ʙᴀɴᴋ ʜᴀᴄᴋ - ${name}\n💳 ****${Math.floor(Math.random() * 9999)}\n💰 $${Math.floor(Math.random() * 99999)}\n🔓 ᴅᴇɴɪᴇᴅ\n\n⚠️ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
     },
 
     camera: async (api, event) => {
         const t = Object.keys(event.mentions || {})[0];
         const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`📸 Accessing ${name}'s camera...\n🎥 Active\n📷 Capturing...\n❌ DENIED\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
+        api.sendMessage(`📸 ᴀᴄᴄᴇꜱꜱɪɴɢ ${name}'ꜱ ᴄᴀᴍᴇʀᴀ...\n🎥 ᴀᴄᴛɪᴠᴇ\n📷 ᴄᴀᴘᴛᴜʀɪɴɢ...\n❌ ᴅᴇɴɪᴇᴅ\n\n⚠️ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
     },
 
     gallery: async (api, event) => {
         const t = Object.keys(event.mentions || {})[0];
         const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`🖼️ Accessing ${name}'s gallery...\n📁 Loading...\n🔒 LOCKED\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
+        api.sendMessage(`🖼️ ᴀᴄᴄᴇꜱꜱɪɴɢ ${name}'ꜱ ɢᴀʟʟᴇʀʏ...\n📁 ʟᴏᴀᴅɪɴɢ...\n🔒 ʟᴏᴄᴋᴇᴅ\n\n⚠️ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
     },
 
     callhack: async (api, event) => {
         const t = Object.keys(event.mentions || {})[0];
         const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`📞 Call Hack - ${name}\n📱 +880 1***-******\n📞 Tapping...\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
+        api.sendMessage(`📞 ᴄᴀʟʟ ʜᴀᴄᴋ - ${name}\n📱 +880 1***-******\n📞 ᴛᴀᴘᴘɪɴɢ...\n\n⚠️ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
     },
 
     ddos: async (api, event) => {
         const t = Object.keys(event.mentions || {})[0];
         const name = t ? event.mentions[t].replace('@', '') : "user";
-        api.sendMessage(`💥 DDoS - ${name}\n⚡ 1000/s\n🔥 OVERLOADED\n\n⚠️ PRANK${timeFooter()}`, event.threadID);
+        api.sendMessage(`💥 ᴅᴅᴏꜱ - ${name}\n⚡ 1000/ꜱ\n🔥 ᴏᴠᴇʀʟᴏᴀᴅᴇᴅ\n\n⚠️ ᴘʀᴀɴᴋ${timeFooter()}`, event.threadID);
     },
 
-    rank: (api, event) => {
-        const db = getDB();
-        const user = db.users?.[event.senderID] || { points: 0 };
-        api.sendMessage(`🏅 Your Rank\n━━━━━━━━━━━━━━━━━━━━━━━━\n👤 Points: ${user.points || 0}${timeFooter()}`, event.threadID);
+    // ==================== UTILITY ====================
+    say: async (api, event, args, config) => {
+        const { hasPermission, permissionDenied } = require('../utils');
+        if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
+        const m = args.join(" ");
+        if (!m) return api.sendMessage("Usage: /say [text]" + timeFooter(), event.threadID);
+        api.sendMessage(m, event.threadID);
     },
 
-    leaderboard: (api, event) => {
-        const db = getDB();
-        const users = Object.entries(db.users || {}).sort((a, b) => (b[1].points || 0) - (a[1].points || 0)).slice(0, 10);
-        let msg = "🏆 Leaderboard\n━━━━━━━━━━━━━━━━━━━━━━━━\n";
-        users.forEach((u, i) => { msg += `${i + 1}. ${u[0]}: ${u[1].points || 0}\n`; });
-        api.sendMessage(msg + timeFooter(), event.threadID);
+    poll: (api, event, args) => {
+        const q = args.join(" ") || "Your opinion?";
+        api.sendMessage(`📊 ᴘᴏʟʟ\n━━━━━━━━━━━━━━━━━━━━━━━━\n❓ ${q}\n\n👍 ʏᴇꜱ\n👎 ɴᴏ${timeFooter()}`, event.threadID);
+    },
+
+    vid: async (api, event, args) => {
+        if (!args[0]) return api.sendMessage("Usage: /vid [link]" + timeFooter(), event.threadID);
+        api.sendMessage("📥 ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ᴠɪᴅᴇᴏ..." + timeFooter(), event.threadID);
     }
 
 };

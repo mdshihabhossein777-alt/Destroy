@@ -1,13 +1,18 @@
 {
-    "botName": "DEAD DESTROYER",
-    "prefix": "/",
-    "owner": "61577562306224",
-    "botAdmins": [
-        "61586002181800",
-        "BOT_ADMIN_ID_2"
-    ],
-    "version": "V1.3",
-     "previousVersion": "V1.2",
-    "developer": "Ariyan Shihab"
+  "botName": "𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓𝐄𝐌",
+  "prefix": "/",
+  "owner": "61577562306224",
+  "botAdmins": [61586002181800],
+  "version": "V2.0",
+  "previousVersion": "V1.1",
+  "developer": "Ariyan Shihab",
+  "groupName": "SAYONARA NO MERCY - さよなら",
+  "notifyGroups": [
+    "1023835213991536",
+    "2123911331473921",
+    "902413072587606",
+    "4629715110683132"
+  ],
+  "autoDetectBots": true,
+  "advancedSecurity": true
 }
- 

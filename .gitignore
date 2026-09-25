@@ -7,3 +7,5 @@ appstate.json
 Fca_Database/
 *.sqlite
 *.sqlite3
+package-lock.json
+temp/
