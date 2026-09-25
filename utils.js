@@ -462,7 +462,20 @@ async function checkPrefix(api, event, config) {
     return false;
 }
 
+// ==================== 👑 Owner/Admin List Helpers ====================
+function getOwnerList(config) {
+    if (!config.owner) return [];
+    if (Array.isArray(config.owner)) return config.owner.map(id => String(id).trim()).filter(id => id);
+    if (typeof config.owner === "string") return config.owner.split(",").map(id => id.trim()).filter(id => id);
+    return [];
+}
 
+function getAdminList(config) {
+    if (!config.botAdmins) return [];
+    if (Array.isArray(config.botAdmins)) return config.botAdmins.map(id => String(id).trim()).filter(id => id);
+    if (typeof config.botAdmins === "string") return config.botAdmins.split(",").map(id => id.trim()).filter(id => id);
+    return [];
+}
 
 
 
