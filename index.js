@@ -5,7 +5,6 @@ const http = require('http');
 const login = require('@dongdev/fca-unofficial');
 const config = require('./config.json');
 const { getDB, saveDB, timeFooter, sendWithGif, guessGender, getUserRole, hasPermission, permissionDenied, SLOW_MODE, sleep, isGroupThrottled } = require('./utils');
-
 // ==================== AppState Load ====================
 let appState;
 try {
