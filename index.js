@@ -5,7 +5,6 @@ const http = require('http');
 const login = require('@dongdev/fca-unofficial');
 const config = require('./config.json');
 
-// ==================== 🔧 Utils Import ====================
 const { 
     getDB, saveDB, timeFooter, 
     sendWithGif, guessGender, getUserRole, hasPermission, permissionDenied, 
@@ -16,7 +15,9 @@ const {
     getRandomDelay, getCommandDelay, checkSpam
 } = require('./utils');
 
-// ==================== 🔑 AppState Load ====================
+// Guardian import
+const { guardian } = require('./commands/guardian');
+
 let appState;
 try {
     if (process.env.APPSTATE) {
@@ -31,7 +32,6 @@ try {
     process.exit(1);
 }
 
-// ==================== 📦 Load Commands ====================
 const commands = {};
 function loadCommands(dir) {
     try {
@@ -55,11 +55,9 @@ loadCommands('./commands');
 loadCommands('./security');
 console.log(`📦 Total ${Object.keys(commands).length} commands loaded`);
 
-// ==================== Trackers ====================
 const lastMsg = {};
 const joinTracker = {};
 
-// ==================== Login ====================
 login({ appState }, (err, api) => {
     if (err) return console.error("❌ Login failed:", err);
 
@@ -67,77 +65,34 @@ login({ appState }, (err, api) => {
     api.setOptions({ listenEvents: true, selfListen: false });
     console.log(`🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ is online`);
 
-    // ==================== 🔔 AUTO NOTIFICATION ====================
+    // AUTO NOTIFICATION
     setTimeout(async () => {
         try {
             const db = getDB();
             if (!db.settings) db.settings = {};
-
             const dbGroups = Object.keys(db.groups || {});
             const configGroups = config.notifyGroups || [];
             const allGroups = [...new Set([...dbGroups, ...configGroups])];
-
             console.log(`📋 Groups to notify: ${allGroups.length}`);
             if (allGroups.length === 0) return;
-
             const currentVersion = config.version || "V2.0";
             if (db.settings.lastNotifiedVersion === currentVersion) return;
-
-            const updateMsg = `🌸 ━━━━━━━━━━━━━━━━━━━━━ 🌸
-   💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ 💀
-🌸 ━━━━━━━━━━━━━━━━━━━━━ 🌸
-
-🔔 𝐔ᴘᴅᴀᴛᴇ 𝐍ᴏᴛɪꜰɪᴄᴀᴛɪᴏɴ!
-
-📌 ᴘʀᴇᴠɪᴏᴜꜱ: ${config.previousVersion || "V1.1"}
-🚀 ᴄᴜʀʀᴇɴᴛ : ${currentVersion}
-
-✨ ɴᴇᴡ ꜰᴇᴀᴛᴜʀᴇꜱ
-━━━━━━━━━━━━━━━━━━━━━━━━
-🎬 ᴀɴɪᴍᴇ ɢɪꜰ ꜱʏꜱᴛᴇᴍ
-🛡️ ʙʀᴜᴛᴀʟ ꜱᴇᴄᴜʀɪᴛʏ
-🎨 ᴡᴇʟᴄᴏᴍᴇ ᴄᴀʀᴅꜱ
-💰 ᴇᴄᴏɴᴏᴍʏ + ɢᴀᴍᴇꜱ
-🔒 ɢʀᴏᴜᴘ ʟᴏᴄᴋ ꜱʏꜱᴛᴇᴍ
-🤖 ᴀɴᴛɪ-ʙᴏᴛ ᴅᴇᴛᴇᴄᴛɪᴏɴ
-🛡️ ʀᴇᴀʟ-ᴛɪᴍᴇ ɢᴜᴀʀᴅɪᴀɴ
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
-
-            let sent = 0, failed = 0;
+            const updateMsg = `🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ ᴜᴘᴅᴀᴛᴇ\n📌 ᴘʀᴇᴠɪᴏᴜꜱ: ${config.previousVersion || "V1.1"}\n🚀 ᴄᴜʀʀᴇɴᴛ : ${currentVersion}\n${timeFooter()}`;
+            let sent = 0;
             for (const gid of allGroups) {
                 try {
-                    const isValid = await new Promise(r => {
-                        let done = false;
-                        const timeout = setTimeout(() => { if (!done) { done = true; r(false); } }, 8000);
-                        api.getThreadInfo(gid, (err, info) => {
-                            if (done) return;
-                            done = true;
-                            clearTimeout(timeout);
-                            if (err || !info) r(false);
-                            else r(true);
-                        });
-                    });
-
-                    if (!isValid) {
-                        delete db.groups[gid];
-                        continue;
-                    }
-
                     await new Promise(r => api.sendMessage(updateMsg, gid, () => r()));
                     sent++;
                     await sleep(getRandomDelay(6000, 12000));
-                } catch (e) { failed++; }
+                } catch (e) {}
             }
-
             db.settings.lastNotifiedVersion = currentVersion;
             saveDB(db);
             console.log(`🔔 Notified: ${sent}/${allGroups.length}`);
-        } catch (e) { console.error("Notify error:", e.message); }
+        } catch (e) {}
     }, 15000);
 
-    // ==================== 📨 MAIN LISTENER ====================
+    // MAIN LISTENER
     api.listenMqtt(async (err, event) => {
         if (err) return console.error("MQTT Error:", err.message);
         if (!event) return;
@@ -146,17 +101,12 @@ login({ appState }, (err, api) => {
             const db = getDB();
             const tid = event.threadID;
 
-            // ==================== 📊 AUTO GROUP TRACKING ====================
+            // GROUP TRACKING
             if (tid && event.isGroup) {
                 if (!db.groups) db.groups = {};
                 if (!db.groups[tid]) {
-                    db.groups[tid] = {
-                        firstSeen: Date.now(),
-                        lastSeen: Date.now(),
-                        name: event.threadName || "Unknown"
-                    };
+                    db.groups[tid] = { firstSeen: Date.now(), lastSeen: Date.now(), name: event.threadName || "Unknown" };
                     saveDB(db);
-                    console.log(`📊 NEW Group: ${tid}`);
                     try {
                         const newConfig = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
                         if (!newConfig.notifyGroups) newConfig.notifyGroups = [];
@@ -174,13 +124,19 @@ login({ appState }, (err, api) => {
                 }
             }
 
-            // ==================== 👤 USER ACTIVITY ====================
+            // USER ACTIVITY
             if (event.senderID && event.type === "message") {
                 if (!db.users) db.users = {};
                 if (!db.users[event.senderID]) db.users[event.senderID] = { points: 0, coins: 0, lastActive: 0 };
                 db.users[event.senderID].points = (db.users[event.senderID].points || 0) + 1;
                 db.users[event.senderID].lastActive = Date.now();
                 saveDB(db);
+            }
+
+            // ==================== 🛡️ GUARDIAN CHECK ====================
+            if (event.type === "message" && event.body && tid) {
+                const isViolation = await guardian(api, event, config);
+                if (isViolation) return; // লঙ্ঘন হলে পরের প্রসেসিং বন্ধ
             }
 
             if (tid && db.security?.[tid]?.botOff && event.senderID !== config.owner) return;
@@ -193,54 +149,19 @@ login({ appState }, (err, api) => {
             const isGroupAdmin = senderRole === "groupadmin";
             const isAdmin = isOwner || isBotAdmin || isGroupAdmin;
 
-            // ==================== 💬 MESSAGE PROCESSING ====================
+            // MESSAGE PROCESSING
             if (event.type === "message" && event.body) {
                 const msg = event.body.trim();
 
-                // Prefix Only Check
                 if (msg === config.prefix) {
                     await checkPrefix(api, event, config);
                     return;
                 }
 
-                // AFK
                 if (db.afk?.[event.senderID]) {
                     delete db.afk[event.senderID];
                     saveDB(db);
                     api.sendMessage(`✅ 𝐖ᴇʟᴄᴏᴍᴇ 𝐁ᴀᴄᴋ!${timeFooter()}`, tid);
-                }
-
-                // Protections
-                if (!isOwner && !isBotAdmin && !isAdmin) {
-                    if (grp.antiLink && /(https?:\/\/|www\.|\.com|\.net)/gi.test(event.body)) {
-                        api.unsendMessage(event.messageID);
-                        api.sendMessage(`🔗 𝐋ɪɴᴋꜱ 𝐍ᴏᴛ 𝐀ʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
-                        return;
-                    }
-                    if (grp.antiGali && /(madarchod|bhenchod|fuck|shit|bastard|harami)/gi.test(event.body)) {
-                        api.unsendMessage(event.messageID);
-                        api.sendMessage(`🤬 𝐁ᴀᴅ 𝐖ᴏʀᴅꜱ 𝐍ᴏᴛ 𝐀ʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
-                        return;
-                    }
-                    if (grp.antiPhone && /(\+?880|01[3-9])\d{8,9}/g.test(event.body)) {
-                        api.unsendMessage(event.messageID);
-                        api.sendMessage(`📱 𝐏ʜᴏɴᴇ 𝐍ᴏᴛ 𝐀ʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
-                        return;
-                    }
-                }
-
-                // Anti-sticker/gif
-                if (event.attachments && event.attachments.length > 0 && !isOwner && !isBotAdmin && !isAdmin) {
-                    for (const att of event.attachments) {
-                        if (grp.antiSticker && att.type === "sticker") {
-                            api.unsendMessage(event.messageID);
-                            api.sendMessage(`🎨 𝐒ᴛɪᴄᴋᴇʀꜱ 𝐍ᴏᴛ 𝐀ʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
-                        }
-                        if (grp.antiGif && att.type === "animated_image") {
-                            api.unsendMessage(event.messageID);
-                            api.sendMessage(`🎬 𝐆ɪꜰꜱ 𝐍ᴏᴛ 𝐀ʟʟᴏᴡᴇᴅ!${timeFooter()}`, tid);
-                        }
-                    }
                 }
 
                 if (sec.onlyAdmin && !isAdmin) {
@@ -253,52 +174,25 @@ login({ appState }, (err, api) => {
                     return;
                 }
 
-                const slow = grp.slowMode || 0;
-                if (slow > 0 && !isAdmin) {
-                    if (lastMsg[tid] && Date.now() - lastMsg[tid] < slow * 1000) {
-                        api.unsendMessage(event.messageID);
-                        return;
-                    }
-                    lastMsg[tid] = Date.now();
-                }
-
-                // Bot Active
                 if (msg.toLowerCase() === "bot active" || msg.toLowerCase() === "bot") {
-                    const secCount = Object.keys(sec).filter(k => sec[k] === true).length;
-                    return api.sendMessage(
-                        `🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ 𝐈ꜱ 𝐀ᴄᴛɪᴠᴇ ✅\n🛡️ 𝐒ᴇᴄᴜʀɪᴛʏ: ${secCount} 𝐀ᴄᴛɪᴠᴇ${timeFooter()}`,
-                        tid
-                    );
+                    return api.sendMessage(`🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ 𝐈ꜱ 𝐀ᴄᴛɪᴠᴇ ✅${timeFooter()}`, tid);
                 }
 
-                // Command Processing
                 if (msg.startsWith(config.prefix)) {
                     const args = msg.slice(config.prefix.length).split(' ');
                     const cmd = args.shift().toLowerCase();
 
-                    // Group Throttle
-                    if (isGroupThrottled(tid) && !isOwner) {
-                        return;
-                    }
+                    if (isGroupThrottled(tid) && !isOwner) return;
 
                     if (commands[cmd]) {
-                        console.log(`✅ Command: ${cmd} | Role: ${senderRole}`);
-                        
-                        // Anti-Spam Check
+                        console.log(`✅ Command: ${cmd}`);
                         const isSpam = checkSpam(tid);
-                        if (isSpam) {
-                            console.log(`⚠️ Spam detected in ${tid}, pausing...`);
-                            await sleep(10000);
-                        }
+                        if (isSpam) await sleep(10000);
                         
-                        // Typing Indicator
                         api.sendTypingIndicator(tid, () => {});
-                        
-                        // Command Delay (Real Human)
                         const commandDelay = await getCommandDelay(cmd);
                         await sleep(commandDelay);
                         
-                        // Run command
                         try {
                             commands[cmd](api, event, args, config);
                         } catch (e) {
@@ -311,102 +205,49 @@ login({ appState }, (err, api) => {
                 }
             }
 
-            // ==================== 🎉 WELCOME EVENT ====================
+            // WELCOME EVENT
             if (event.logMessageType === "log:subscribe") {
                 const added = event.logMessageData?.addedParticipants || [];
                 const botID = api.getCurrentUserID();
                 const isBotJoined = added.some(p => p.userFbId === botID);
 
                 if (isBotJoined) {
-                    api.sendMessage(
-                        `🌸 𝐓ʜᴀɴᴋꜱ 𝐅ᴏʀ 𝐀ᴅᴅɪɴɢ 𝐌ᴇ!\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ\n✅ ᴛʏᴘᴇ "bot active"${timeFooter()}`,
-                        tid
-                    );
+                    api.sendMessage(`🌸 𝐓ʜᴀɴᴋꜱ 𝐅ᴏʀ 𝐀ᴅᴅɪɴɢ 𝐌ᴇ!\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ\n✅ ᴛʏᴘᴇ "bot active"${timeFooter()}`, tid);
                 } else {
                     try {
                         const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
                         const gname = info?.threadName || config.groupName || "SAYONARA NO MERCY - さよなら";
-                        
-                        let mcount = 0;
-                        if (info && info.participantIDs) {
-                            if (Array.isArray(info.participantIDs)) mcount = info.participantIDs.length;
-                            else if (typeof info.participantIDs === 'object') mcount = Object.keys(info.participantIDs).length;
-                        }
-                        if (mcount === 0) mcount = 100;
-
+                        let mcount = info?.participantIDs?.length || 100;
                         let addedBy = "Unknown";
                         try {
                             const adminInfo = await new Promise(r => api.getUserInfo(event.author, (e, ret) => r(e ? null : ret[event.author])));
                             if (adminInfo && adminInfo.name) addedBy = adminInfo.name;
                         } catch (e) {}
-
                         const now = new Date();
-                        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                        const dayName = days[now.getDay()];
-                        const dateStr = `${dayName}, ${now.toLocaleDateString('en-US')}, ${now.toLocaleTimeString('en-US')}`;
+                        const dateStr = `${now.toLocaleDateString('en-US')}, ${now.toLocaleTimeString('en-US')}`;
 
                         for (const p of added) {
                             const name = p.fullName || "New Member";
-                            
-                            const welcomeText = `🌸 𝐇ᴇʟʟᴏ ${name}
-━━━━━━━━━━━━━━━━━━━━━━━━
-🎌 𝐖ᴇʟᴄᴏᴍᴇ ᴛᴏ ${gname}
-━━━━━━━━━━━━━━━━━━━━━━━━
-📊 𝐘ᴏᴜ'ʀᴇ ᴛʜᴇ ${mcount}ᴛʜ 𝐌ᴇᴍʙᴇʀ!
-🎉 𝐄ɴᴊᴏʏ ʏᴏᴜʀ ꜱᴛᴀʏ!
-━━━━━━━━━━━━━━━━━━━━━━━━
-➕ 𝐀ᴅᴅᴇᴅ ʙʏ : ${addedBy}
-📅 ${dateStr}${timeFooter()}`;
-
-                            const avatarUrl = `https://graph.facebook.com/${p.userFbId}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
-
-                            // টেক্সট মেসেজ
-                            api.sendMessage({
-                                body: welcomeText,
-                                mentions: [{ tag: name, id: p.userFbId }]
-                            }, tid);
-
-                            await sleep(getRandomDelay(2000, 4000));
-
-                            // Welcome Card
-                            const cardBuffer = await generateWelcomeCard(name, avatarUrl, gname, mcount, addedBy, dateStr);
-                            if (cardBuffer) {
-                                const { PassThrough } = require('stream');
-                                const stream = new PassThrough();
-                                stream.end(cardBuffer);
-                                api.sendMessage({ attachment: stream }, tid);
-                            } else {
-                                await sendAdvancedGif(api, event, "🌸 𝐖ᴇʟᴄᴏᴍᴇ!", 'welcome');
-                            }
-
+                            const welcomeText = `🌸 𝐇ᴇʟʟᴏ ${name}\n🎌 𝐖ᴇʟᴄᴏᴍᴇ ᴛᴏ ${gname}\n📊 𝐘ᴏᴜ'ʀᴇ ${mcount}ᴛʜ 𝐌ᴇᴍʙᴇʀ\n➕ 𝐀ᴅᴅᴇᴅ ʙʏ: ${addedBy}\n📅 ${dateStr}${timeFooter()}`;
+                            api.sendMessage({ body: welcomeText, mentions: [{ tag: name, id: p.userFbId }] }, tid);
                             await sleep(getRandomDelay(2000, 4000));
                         }
-                    } catch (e) {
-                        console.error("Welcome error:", e.message);
-                    }
+                    } catch (e) {}
                 }
             }
 
-            // ==================== 👋 LEFT EVENT ====================
+            // LEFT EVENT
             if (event.logMessageType === "log:unsubscribe") {
                 const lid = event.logMessageData?.leftParticipantFbId;
                 if (lid && lid !== api.getCurrentUserID()) {
                     const kicked = event.author !== lid;
                     try {
-                        const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
                         api.getUserInfo(lid, async (e, ret) => {
                             if (e) return;
                             const name = ret[lid]?.name || "A member";
-                            const mcount = info?.participantIDs?.length || 0;
                             const msg = kicked
-                                ? `👢 ${name} 𝐖ᴀꜱ 𝐊ɪᴄᴋᴇᴅ\n👥 ʀᴇᴍᴀɪɴɪɴɢ: ${mcount}${timeFooter()}`
-                                : `🌸 ꜱᴀʏᴏɴᴀʀᴀ ${name}
-━━━━━━━━━━━━━━━━━━━━━━━━
-💔 𝐆ᴏᴏᴅʙʏᴇ, ꜰʀɪᴇɴᴅ
-🌙 ᴍᴀʏ ʏᴏᴜ ꜰɪɴᴅ ᴘᴇᴀᴄᴇ
-⭐ ᴡᴇ ᴡɪʟʟ ᴍɪꜱꜱ ʏᴏᴜ
-━━━━━━━━━━━━━━━━━━━━━━━━
-👥 ʀᴇᴍᴀɪɴɪɴɢ: ${mcount}${timeFooter()}`;
+                                ? `👢 ${name} 𝐖ᴀꜱ 𝐊ɪᴄᴋᴇᴅ${timeFooter()}`
+                                : `🌸 ꜱᴀʏᴏɴᴀʀᴀ ${name}\n💔 𝐆ᴏᴏᴅʙʏᴇ${timeFooter()}`;
                             await sendAdvancedGif(api, event, msg, 'sayonara');
                         });
                     } catch (e) {}
@@ -419,7 +260,6 @@ login({ appState }, (err, api) => {
     });
 });
 
-// ==================== ⏰ AUTO-KICK ====================
 setInterval(async () => {
     try {
         if (!global.globalBotApi) return;
@@ -446,7 +286,6 @@ setInterval(async () => {
     } catch (e) {}
 }, 24 * 60 * 60 * 1000);
 
-// ==================== 🧹 CACHE CLEANUP ====================
 setInterval(async () => {
     try {
         const cleaned = cleanOldData();
@@ -454,7 +293,6 @@ setInterval(async () => {
     } catch (e) {}
 }, 24 * 60 * 60 * 1000);
 
-// ==================== 🌐 HEALTH SERVER ====================
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -463,12 +301,10 @@ http.createServer((req, res) => {
     console.log(`🌐 Health server on port ${PORT}`);
 });
 
-// ==================== 🔄 SELF-PING ====================
 const RENDER_URL = process.env.RENDER_URL || "https://destroy-k66o.onrender.com";
 setInterval(async () => {
     try { await axios.get(RENDER_URL); } catch (e) {}
 }, 4 * 60 * 1000);
 
-// ==================== 🛡️ ERROR HANDLERS ====================
 process.on('uncaughtException', (err) => console.error("Uncaught:", err.message));
 process.on('unhandledRejection', (err) => console.error("Unhandled:", err));
