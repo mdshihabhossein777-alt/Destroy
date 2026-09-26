@@ -58,6 +58,41 @@ console.log(`📦 Total ${Object.keys(commands).length} commands loaded`);
 const lastMsg = {};
 const joinTracker = {};
 
+// ==================== 🎯 HELPER: Get Accurate Group Info ====================
+async function getAccurateGroupInfo(api, tid) {
+    return new Promise((resolve) => {
+        api.getThreadInfo(tid, (err, info) => {
+            if (err || !info) return resolve(null);
+            resolve({
+                name: info.threadName || "Unknown Group",
+                count: info.participantIDs?.length || 0,
+                emoji: info.emoji || "🌸",
+                participants: info.participantIDs || []
+            });
+        });
+    });
+}
+
+// ==================== 🎯 HELPER: Get User Name ====================
+async function getUserName(api, uid) {
+    return new Promise((resolve) => {
+        api.getUserInfo(uid, (e, ret) => {
+            if (e || !ret || !ret[uid]) return resolve("Unknown");
+            resolve(ret[uid].name || "Unknown");
+        });
+    });
+}
+
+// ==================== 🎯 HELPER: Get User Avatar URL ====================
+async function getUserAvatar(api, uid) {
+    return new Promise((resolve) => {
+        api.getUserInfo(uid, (e, ret) => {
+            if (e || !ret || !ret[uid]) return resolve(null);
+            resolve(ret[uid].thumbSrc || ret[uid].profileUrl || null);
+        });
+    });
+}
+
 login({ appState }, (err, api) => {
     if (err) return console.error("❌ Login failed:", err);
 
@@ -210,52 +245,176 @@ login({ appState }, (err, api) => {
                 }
             }
 
-            // WELCOME EVENT
+            // ==================== WELCOME EVENT ====================
             if (event.logMessageType === "log:subscribe") {
                 const added = event.logMessageData?.addedParticipants || [];
                 const botID = api.getCurrentUserID();
                 const isBotJoined = added.some(p => p.userFbId === botID);
 
                 if (isBotJoined) {
-                    api.sendMessage(`🌸 𝐓ʜᴀɴᴋꜱ 𝐅ᴏʀ 𝐀ᴅᴅɪɴɢ 𝐌ᴇ!\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ\n✅ ᴛʏᴘᴇ "bot active"${timeFooter()}`, tid);
+                    api.sendMessage(
+                        `🌸 𝐓ʜᴀɴᴋꜱ 𝐅ᴏʀ 𝐀ᴅᴅɪɴɢ 𝐌ᴇ!\n💀 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ\n✅ ᴛʏᴘᴇ "bot active"${timeFooter()}`,
+                        tid
+                    );
                 } else {
                     try {
-                        const info = await new Promise(r => api.getThreadInfo(tid, (e, i) => r(e ? null : i)));
-                        const gname = info?.threadName || config.groupName || "SAYONARA NO MERCY - さよなら";
-                        let mcount = info?.participantIDs?.length || 100;
+                        // ✅ Accurate group info
+                        const groupInfo = await getAccurateGroupInfo(api, tid);
+                        const gname = groupInfo?.name || "Unknown Group";
+                        const mcount = groupInfo?.count || 0;
+                        const emoji = groupInfo?.emoji || "🌸";
+
+                        // ✅ Added by name
                         let addedBy = "Unknown";
-                        try {
-                            const adminInfo = await new Promise(r => api.getUserInfo(event.author, (e, ret) => r(e ? null : ret[event.author])));
-                            if (adminInfo && adminInfo.name) addedBy = adminInfo.name;
-                        } catch (e) {}
-                        const now = new Date();
-                        const dateStr = `${now.toLocaleDateString('en-US')}, ${now.toLocaleTimeString('en-US')}`;
+                        if (event.author && event.author !== botID) {
+                            addedBy = await getUserName(api, event.author);
+                        }
 
                         for (const p of added) {
                             const name = p.fullName || "New Member";
-                            const welcomeText = `🌸 𝐇ᴇʟʟᴏ ${name}\n🎌 𝐖ᴇʟᴄᴏᴍᴇ ᴛᴏ ${gname}\n📊 𝐘ᴏᴜ'ʀᴇ ${mcount}ᴛʜ 𝐌ᴇᴍʙᴇʀ\n➕ 𝐀ᴅᴅᴇᴅ ʙʏ: ${addedBy}\n📅 ${dateStr}${timeFooter()}`;
-                            api.sendMessage({ body: welcomeText, mentions: [{ tag: name, id: p.userFbId }] }, tid);
+                            const uid = p.userFbId;
+
+                            const welcomeText = `╔═══════════════════════╗
+   ${emoji} 𝐖ᴇʟᴄᴏᴍᴇ ${emoji}
+╚═══════════════════════╝
+🌸 𝐇ᴇʟʟᴏ ${name}!
+━━━━━━━━━━━━━━━━━━━━━━━━
+🎌 𝐆ʀᴏᴜᴘ: ${gname}
+📊 𝐌ᴇᴍʙᴇʀ: #${mcount}
+➕ 𝐀ᴅᴅᴇᴅ 𝐁ʏ: ${addedBy}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💖 𝐖ᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ 𝐅ᴀᴍɪʟʏ!
+🎉 𝐄ɴᴊᴏʏ 𝐘ᴏᴜʀ 𝐒ᴛᴀʏ!
+━━━━━━━━━━━━━━━━━━━━━━━━
+🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
+
+                            // ✅ Generate welcome card (image)
+                            let imageBuffer = null;
+                            try {
+                                const avatarUrl = await getUserAvatar(api, uid);
+                                imageBuffer = await generateWelcomeCard(
+                                    name,
+                                    avatarUrl,
+                                    gname,
+                                    mcount,
+                                    addedBy,
+                                    new Date().toLocaleDateString('en-GB'),
+                                    "welcome"
+                                );
+                            } catch (e) {
+                                console.error("Welcome card gen error:", e.message);
+                            }
+
+                            // ✅ Send with image
+                            try {
+                                if (imageBuffer) {
+                                    const tempPath = path.join(__dirname, `temp_welcome_${Date.now()}.png`);
+                                    fs.writeFileSync(tempPath, imageBuffer);
+
+                                    await new Promise(r => api.sendMessage({
+                                        body: welcomeText,
+                                        attachment: fs.createReadStream(tempPath),
+                                        mentions: [{ tag: name, id: uid }]
+                                    }, tid, () => r()));
+
+                                    setTimeout(() => {
+                                        try { fs.unlinkSync(tempPath); } catch (e) {}
+                                    }, 8000);
+                                } else {
+                                    await new Promise(r => api.sendMessage({
+                                        body: welcomeText,
+                                        mentions: [{ tag: name, id: uid }]
+                                    }, tid, () => r()));
+                                }
+                            } catch (e) {
+                                console.error("Welcome send error:", e.message);
+                                api.sendMessage({
+                                    body: welcomeText,
+                                    mentions: [{ tag: name, id: uid }]
+                                }, tid);
+                            }
+
                             await sleep(getRandomDelay(2000, 4000));
                         }
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error("Welcome event error:", e.message);
+                    }
                 }
             }
 
-            // LEFT EVENT
+            // ==================== LEFT EVENT ====================
             if (event.logMessageType === "log:unsubscribe") {
                 const lid = event.logMessageData?.leftParticipantFbId;
-                if (lid && lid !== api.getCurrentUserID()) {
+                const botID = api.getCurrentUserID();
+
+                if (lid && lid !== botID) {
                     const kicked = event.author !== lid;
                     try {
-                        api.getUserInfo(lid, async (e, ret) => {
-                            if (e) return;
-                            const name = ret[lid]?.name || "A member";
-                            const msg = kicked
-                                ? `👢 ${name} 𝐖ᴀꜱ 𝐊ɪᴄᴋᴇᴅ${timeFooter()}`
-                                : `🌸 ꜱᴀʏᴏɴᴀʀᴀ ${name}\n💔 𝐆ᴏᴏᴅʙʏᴇ${timeFooter()}`;
-                            await sendAdvancedGif(api, event, msg, 'sayonara');
-                        });
-                    } catch (e) {}
+                        const name = await getUserName(api, lid);
+                        const groupInfo = await getAccurateGroupInfo(api, tid);
+                        const gname = groupInfo?.name || "Unknown Group";
+                        const mcount = groupInfo?.count || 0;
+                        const emoji = groupInfo?.emoji || "🌸";
+
+                        const msgText = kicked
+                            ? `╔═══════════════════════╗
+   👢 𝐌ᴇᴍʙᴇʀ 𝐊ɪᴄᴋᴇᴅ 👢
+╚═══════════════════════╝
+👤 ${name}
+🎌 ${gname}
+📊 𝐑ᴇᴍᴀɪɴɪɴɢ: ${mcount}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💔 𝐆ᴏᴏᴅʙʏᴇ!
+🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`
+                            : `╔═══════════════════════╗
+   ${emoji} 𝐆ᴏᴏᴅʙʏᴇ ${emoji}
+╚═══════════════════════╝
+👤 ${name}
+🎌 ${gname}
+📊 𝐑ᴇᴍᴀɪɴɪɴɢ: ${mcount}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💔 𝐖ᴇ'ʟʟ 𝐌ɪꜱꜱ 𝐘ᴏᴜ!
+🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
+
+                        let imageBuffer = null;
+                        try {
+                            const avatarUrl = await getUserAvatar(api, lid);
+                            imageBuffer = await generateWelcomeCard(
+                                name,
+                                avatarUrl,
+                                gname,
+                                mcount,
+                                "Unknown",
+                                new Date().toLocaleDateString('en-GB'),
+                                "goodbye"
+                            );
+                        } catch (e) {
+                            console.error("Goodbye card gen error:", e.message);
+                        }
+
+                        try {
+                            if (imageBuffer) {
+                                const tempPath = path.join(__dirname, `temp_goodbye_${Date.now()}.png`);
+                                fs.writeFileSync(tempPath, imageBuffer);
+
+                                await new Promise(r => api.sendMessage({
+                                    body: msgText,
+                                    attachment: fs.createReadStream(tempPath)
+                                }, tid, () => r()));
+
+                                setTimeout(() => {
+                                    try { fs.unlinkSync(tempPath); } catch (e) {}
+                                }, 8000);
+                            } else {
+                                await new Promise(r => api.sendMessage({ body: msgText }, tid, () => r()));
+                            }
+                        } catch (e) {
+                            console.error("Goodbye send error:", e.message);
+                            api.sendMessage({ body: msgText }, tid);
+                        }
+                    } catch (e) {
+                        console.error("Leave event error:", e.message);
+                    }
                 }
             }
 
@@ -292,10 +451,9 @@ setInterval(async () => {
     } catch (e) {}
 }, 24 * 60 * 60 * 1000);
 
-// ==================== 🛡️ GUARDIAN AUTO SMS + 24H EXPIRY CHECK ====================
-// প্রতি ৩০ মিনিটে check হবে
-// - 24 ঘণ্টা শেষ হলে auto OFF
-// - প্রতি ৪ ঘণ্টায় একবার status SMS
+// ==================== 🛡️ GUARDIAN 24H EXPIRY CHECK ONLY (No Auto SMS Spam) ====================
+// ⚠️ Auto status SMS সম্পূর্ণ বন্ধ করা হয়েছে
+// শুধু 24 ঘণ্টা পূর্ণ হলে Guardian OFF হবে + একটা expiry message
 setInterval(async () => {
     try {
         if (!global.globalBotApi) return;
@@ -308,7 +466,7 @@ setInterval(async () => {
             const sec = db.security[tid];
             if (!sec.guardian) continue;
 
-            // 🕒 24 ঘণ্টা Expiry Check
+            // 🕒 শুধু 24 ঘণ্টা Expiry Check
             if (sec.guardianExpiry && now > sec.guardianExpiry) {
                 sec.guardian = false;
                 sec.guardianExpiry = null;
@@ -325,45 +483,10 @@ setInterval(async () => {
                         tid, () => r()
                     ));
                 } catch (e) {}
-                continue;
-            }
-
-            // 📢 প্রতি ৪ ঘণ্টায় Auto Status SMS
-            const lastSms = sec.lastGuardianSms || 0;
-            const FOUR_HOURS = 4 * 60 * 60 * 1000;
-            if (now - lastSms > FOUR_HOURS) {
-                const grp = db.groups[tid] || {};
-                let remaining = "N/A";
-                if (sec.guardianExpiry) {
-                    const ms = sec.guardianExpiry - now;
-                    const h = Math.floor(ms / (60 * 60 * 1000));
-                    const m = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
-                    remaining = `${h}h ${m}m`;
-                }
-
-                const statusMsg = `🛡️ 𝐆ᴜᴀʀᴅɪᴀɴ 𝐀ᴄᴛɪᴠᴇ
-━━━━━━━━━━━━━━━━━━━━━━━━
-🔗 𝐀ɴᴛɪ-𝐋ɪɴᴋ: ${grp.antiLink ? "ON ✅" : "OFF ❌"}
-🤬 𝐀ɴᴛɪ-𝐆ᴀʟɪ: ${grp.antiGali ? "ON ✅" : "OFF ❌"}
-📱 𝐀ɴᴛɪ-𝐏ʜᴏɴᴇ: ${grp.antiPhone ? "ON ✅" : "OFF ❌"}
-🔠 𝐀ɴᴛɪ-𝐂ᴀᴘꜱ: ${sec.capslock ? "ON ✅" : "OFF ❌"}
-🎨 𝐀ɴᴛɪ-𝐒ᴛɪᴄᴋᴇʀ: ${grp.antiSticker ? "ON ✅" : "OFF ❌"}
-🎬 𝐀ɴᴛɪ-𝐆ɪꜰ: ${grp.antiGif ? "ON ✅" : "OFF ❌"}
-━━━━━━━━━━━━━━━━━━━━━━━━
-⏰ 𝐑ᴇᴍᴀɪɴɪɴɢ: ${remaining}
-⚠️ ɢᴀʟɪ/ʟɪɴᴋ ᴅɪʟᴇ ᴡᴀʀɴ + ᴋɪᴄᴋ
-━━━━━━━━━━━━━━━━━━━━━━━━
-🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
-
-                try {
-                    await new Promise(r => global.globalBotApi.sendMessage(statusMsg, tid, () => r()));
-                    sec.lastGuardianSms = now;
-                    saveDB(db);
-                } catch (e) {}
             }
         }
     } catch (e) {
-        console.error("Guardian auto SMS error:", e.message);
+        console.error("Guardian expiry check error:", e.message);
     }
 }, 30 * 60 * 1000); // প্রতি ৩০ মিনিটে check
 
