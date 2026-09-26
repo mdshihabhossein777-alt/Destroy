@@ -65,7 +65,7 @@ login({ appState }, (err, api) => {
     api.setOptions({ listenEvents: true, selfListen: false });
     console.log(`🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ is online`);
 
-    // AUTO NOTIFICATION
+    // ==================== AUTO NOTIFICATION ====================
     setTimeout(async () => {
         try {
             const db = getDB();
@@ -92,7 +92,7 @@ login({ appState }, (err, api) => {
         } catch (e) {}
     }, 15000);
 
-    // MAIN LISTENER
+    // ==================== MAIN LISTENER ====================
     api.listenMqtt(async (err, event) => {
         if (err) return console.error("MQTT Error:", err.message);
         if (!event) return;
@@ -134,11 +134,10 @@ login({ appState }, (err, api) => {
             }
 
             // ==================== 🛡️ GUARDIAN CHECK ====================
-            // ✅ FIX 1: try/catch যোগ করা হয়েছে যাতে guardian error main loop crash না করে
             if (event.type === "message" && event.body && tid) {
                 try {
                     const isViolation = await guardian(api, event, config);
-                    if (isViolation) return; // লঙ্ঘন হলে পরের প্রসেসিং বন্ধ
+                    if (isViolation) return;
                 } catch (gErr) {
                     console.error("⚠️ Guardian check error:", gErr.message);
                 }
@@ -198,8 +197,6 @@ login({ appState }, (err, api) => {
                         const commandDelay = await getCommandDelay(cmd);
                         await sleep(commandDelay);
                         
-                        // ✅ FIX 2: await যোগ করা হয়েছে যাতে async command এর error ধরা পড়ে
-                        // ✅ FIX 3: e.stack log করা হয়েছে যাতে exact error location দেখা যায়
                         try {
                             await commands[cmd](api, event, args, config);
                         } catch (e) {
@@ -268,6 +265,7 @@ login({ appState }, (err, api) => {
     });
 });
 
+// ==================== AUTO KICK INACTIVE MEMBERS (7 days) ====================
 setInterval(async () => {
     try {
         if (!global.globalBotApi) return;
@@ -294,6 +292,82 @@ setInterval(async () => {
     } catch (e) {}
 }, 24 * 60 * 60 * 1000);
 
+// ==================== 🛡️ GUARDIAN AUTO SMS + 24H EXPIRY CHECK ====================
+// প্রতি ৩০ মিনিটে check হবে
+// - 24 ঘণ্টা শেষ হলে auto OFF
+// - প্রতি ৪ ঘণ্টায় একবার status SMS
+setInterval(async () => {
+    try {
+        if (!global.globalBotApi) return;
+        const db = getDB();
+        if (!db.security) return;
+
+        const now = Date.now();
+
+        for (const tid in db.security) {
+            const sec = db.security[tid];
+            if (!sec.guardian) continue;
+
+            // 🕒 24 ঘণ্টা Expiry Check
+            if (sec.guardianExpiry && now > sec.guardianExpiry) {
+                sec.guardian = false;
+                sec.guardianExpiry = null;
+                saveDB(db);
+                try {
+                    await new Promise(r => global.globalBotApi.sendMessage(
+                        `⏰ 𝐆ᴜᴀʀᴅɪᴀɴ 𝐄xᴘɪʀᴇᴅ!
+━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️ 24 ʜᴏᴜʀꜱ ᴄᴏᴍᴘʟᴇᴛᴇᴅ
+💤 Guardian: OFF
+━━━━━━━━━━━━━━━━━━━━━━━━
+📌 ʀᴇ-ᴇɴᴀʙʟᴇ: /guardianon
+🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`,
+                        tid, () => r()
+                    ));
+                } catch (e) {}
+                continue;
+            }
+
+            // 📢 প্রতি ৪ ঘণ্টায় Auto Status SMS
+            const lastSms = sec.lastGuardianSms || 0;
+            const FOUR_HOURS = 4 * 60 * 60 * 1000;
+            if (now - lastSms > FOUR_HOURS) {
+                const grp = db.groups[tid] || {};
+                let remaining = "N/A";
+                if (sec.guardianExpiry) {
+                    const ms = sec.guardianExpiry - now;
+                    const h = Math.floor(ms / (60 * 60 * 1000));
+                    const m = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+                    remaining = `${h}h ${m}m`;
+                }
+
+                const statusMsg = `🛡️ 𝐆ᴜᴀʀᴅɪᴀɴ 𝐀ᴄᴛɪᴠᴇ
+━━━━━━━━━━━━━━━━━━━━━━━━
+🔗 𝐀ɴᴛɪ-𝐋ɪɴᴋ: ${grp.antiLink ? "ON ✅" : "OFF ❌"}
+🤬 𝐀ɴᴛɪ-𝐆ᴀʟɪ: ${grp.antiGali ? "ON ✅" : "OFF ❌"}
+📱 𝐀ɴᴛɪ-𝐏ʜᴏɴᴇ: ${grp.antiPhone ? "ON ✅" : "OFF ❌"}
+🔠 𝐀ɴᴛɪ-𝐂ᴀᴘꜱ: ${sec.capslock ? "ON ✅" : "OFF ❌"}
+🎨 𝐀ɴᴛɪ-𝐒ᴛɪᴄᴋᴇʀ: ${grp.antiSticker ? "ON ✅" : "OFF ❌"}
+🎬 𝐀ɴᴛɪ-𝐆ɪꜰ: ${grp.antiGif ? "ON ✅" : "OFF ❌"}
+━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ 𝐑ᴇᴍᴀɪɴɪɴɢ: ${remaining}
+⚠️ ɢᴀʟɪ/ʟɪɴᴋ ᴅɪʟᴇ ᴡᴀʀɴ + ᴋɪᴄᴋ
+━━━━━━━━━━━━━━━━━━━━━━━━
+🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
+
+                try {
+                    await new Promise(r => global.globalBotApi.sendMessage(statusMsg, tid, () => r()));
+                    sec.lastGuardianSms = now;
+                    saveDB(db);
+                } catch (e) {}
+            }
+        }
+    } catch (e) {
+        console.error("Guardian auto SMS error:", e.message);
+    }
+}, 30 * 60 * 1000); // প্রতি ৩০ মিনিটে check
+
+// ==================== CLEAN OLD DATA ====================
 setInterval(async () => {
     try {
         const cleaned = cleanOldData();
@@ -301,6 +375,7 @@ setInterval(async () => {
     } catch (e) {}
 }, 24 * 60 * 60 * 1000);
 
+// ==================== HEALTH SERVER ====================
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -309,6 +384,7 @@ http.createServer((req, res) => {
     console.log(`🌐 Health server on port ${PORT}`);
 });
 
+// ==================== SELF PING ====================
 const RENDER_URL = process.env.RENDER_URL || "https://destroy-k66o.onrender.com";
 setInterval(async () => {
     try { await axios.get(RENDER_URL); } catch (e) {}
