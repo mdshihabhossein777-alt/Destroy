@@ -1,15 +1,20 @@
-const { 
-    getDB, saveDB, timeFooter, sleep, getUserRole
+const {
+    getDB, saveDB, timeFooter, sleep, getUserRole,
+    hasPermission, permissionDenied
 } = require('../utils');
 
 module.exports = {
-    // ==================== 🛡️ REAL-TIME GUARDIAN ====================
-    guardian: async (api, event, config) => {
+    // ==================== 🛡️ REAL-TIME GUARDIAN (Event Handler) ====================
+    // ⚠️ এটি command নয় — main bot file থেকে প্রতিটি message event-এ কল করুন
+    handleGuardian: async (api, event, config) => {
         try {
             const db = getDB();
             const tid = event.threadID;
             const sid = event.senderID;
             const msg = event.body || "";
+
+            // Guardian OFF থাকলে কিছুই করবে না
+            if (!db.security?.[tid]?.guardian) return false;
 
             // Admin/Owner Check
             const senderRole = await getUserRole(api, event, config);
@@ -21,8 +26,14 @@ module.exports = {
             // Admin দের ইগনোর
             if (isAdmin) return false;
 
-            const grp = db.groups[tid] || {};
-            const sec = db.security[tid] || {};
+            // Safe DB structure
+            if (!db.groups[tid]) db.groups[tid] = {};
+            if (!db.security[tid]) db.security[tid] = {};
+            if (!db.warnings[tid]) db.warnings[tid] = {};
+
+            const grp = db.groups[tid];
+            const sec = db.security[tid];
+
             let violation = null;
             let violationType = "";
 
@@ -96,13 +107,11 @@ module.exports = {
                 });
 
                 // ২. ওয়ার্নিং বাড়ান
-                if (!db.warnings[tid]) db.warnings[tid] = {};
                 db.warnings[tid][sid] = (db.warnings[tid][sid] || 0) + 1;
                 const count = db.warnings[tid][sid];
                 const warnLimit = grp.warnLimit || 3;
 
                 // ৩. লগ সেভ
-                if (!db.groups[tid]) db.groups[tid] = {};
                 if (!db.groups[tid].modLog) db.groups[tid].modLog = [];
                 db.groups[tid].modLog.push(
                     `[${new Date().toLocaleString('en-GB', { timeZone: 'Asia/Dhaka' })}] ${violationType} by ${sid}`
@@ -114,7 +123,9 @@ module.exports = {
                 saveDB(db);
 
                 // ৪. ওয়ার্নিং মেসেজ
-                const userInfo = await new Promise(r => api.getUserInfo(sid, (e, ret) => r(e ? null : ret[sid])));
+                const userInfo = await new Promise(r =>
+                    api.getUserInfo(sid, (e, ret) => r(e ? null : ret[sid]))
+                );
                 const userName = userInfo?.name || "User";
 
                 await sleep(800);
@@ -135,7 +146,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
                 // ৫. ওয়ার্ন লিমিট শেষ হলে কিক
                 if (count >= warnLimit) {
                     await sleep(3000);
-                    
+
                     api.removeUserFromGroup(sid, tid, (err) => {
                         if (!err) {
                             api.sendMessage(
@@ -166,12 +177,23 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
 
     // ==================== 🛡️ GUARDIAN ON ====================
     guardianOn: async (api, event, args, config) => {
-        const { hasPermission, permissionDenied } = require('../utils');
-        if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
 
         const db = getDB();
         if (!db.security[event.threadID]) db.security[event.threadID] = {};
+        if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
+
         db.security[event.threadID].guardian = true;
+
+        // ডিফল্ট সব filter ON (চাইলে পরে OFF করতে পারবেন)
+        db.groups[event.threadID].antiLink = true;
+        db.groups[event.threadID].antiGali = true;
+        db.groups[event.threadID].antiPhone = true;
+        db.groups[event.threadID].antiSticker = true;
+        db.groups[event.threadID].antiGif = true;
+        db.security[event.threadID].capslock = true;
+
         saveDB(db);
 
         api.sendMessage(
@@ -180,24 +202,35 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
 ✅ ᴅᴇʟᴇᴛᴇ ᴠɪᴏʟᴀᴛɪɴɢ ᴍᴇꜱꜱᴀɢᴇꜱ
 ✅ ᴀᴜᴛᴏ ᴡᴀʀɴ ᴜꜱᴇʀꜱ
 ✅ ᴡᴀʀɴ ʟɪᴍɪᴛ = ᴋɪᴄᴋ
+🔗 𝐀ɴᴛɪ-𝐋ɪɴᴋ: ON ✅
+🤬 𝐀ɴᴛɪ-𝐆ᴀʟɪ: ON ✅
+📱 𝐀ɴᴛɪ-𝐏ʜᴏɴᴇ: ON ✅
+🔠 𝐀ɴᴛɪ-𝐂ᴀᴘꜱ: ON ✅
+🎨 𝐀ɴᴛɪ-𝐒ᴛɪᴄᴋᴇʀ: ON ✅
+🎬 𝐀ɴᴛɪ-𝐆ɪꜰ: ON ✅
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`,
             event.threadID
         );
     },
 
+    // ==================== 🛡️ GUARDIAN OFF ====================
     guardianOff: async (api, event, args, config) => {
-        const { hasPermission, permissionDenied } = require('../utils');
-        if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
 
         const db = getDB();
         if (!db.security[event.threadID]) db.security[event.threadID] = {};
         db.security[event.threadID].guardian = false;
         saveDB(db);
 
-        api.sendMessage(`🛡️ 𝐆ᴜᴀʀᴅɪᴀɴ 𝐌ᴏᴅᴇ: OFF ❌${timeFooter()}`, event.threadID);
+        api.sendMessage(
+            `🛡️ 𝐆ᴜᴀʀᴅɪᴀɴ 𝐌ᴏᴅᴇ: OFF ❌${timeFooter()}`,
+            event.threadID
+        );
     },
 
+    // ==================== 🛡️ GUARDIAN STATUS ====================
     guardianStatus: async (api, event, args, config) => {
         const db = getDB();
         const sec = db.security[event.threadID] || {};
@@ -219,21 +252,106 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
         api.sendMessage(msg, event.threadID);
     },
 
+    // ==================== 🔗 ANTI-LINK ====================
+    antiLink: async (api, event, args, config) => {
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
+
+        const db = getDB();
+        if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
+        db.groups[event.threadID].antiLink = args[0] === "on";
+        saveDB(db);
+
+        api.sendMessage(
+            `🔗 𝐀ɴᴛɪ-𝐋ɪɴᴋ: ${db.groups[event.threadID].antiLink ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
+            event.threadID
+        );
+    },
+
+    // ==================== 🤬 ANTI-GALI ====================
+    antiGali: async (api, event, args, config) => {
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
+
+        const db = getDB();
+        if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
+        db.groups[event.threadID].antiGali = args[0] === "on";
+        saveDB(db);
+
+        api.sendMessage(
+            `🤬 𝐀ɴᴛɪ-𝐆ᴀʟɪ: ${db.groups[event.threadID].antiGali ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
+            event.threadID
+        );
+    },
+
+    // ==================== 📱 ANTI-PHONE ====================
+    antiPhone: async (api, event, args, config) => {
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
+
+        const db = getDB();
+        if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
+        db.groups[event.threadID].antiPhone = args[0] === "on";
+        saveDB(db);
+
+        api.sendMessage(
+            `📱 𝐀ɴᴛɪ-𝐏ʜᴏɴᴇ: ${db.groups[event.threadID].antiPhone ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
+            event.threadID
+        );
+    },
+
+    // ==================== 🎨 ANTI-STICKER ====================
+    antiSticker: async (api, event, args, config) => {
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
+
+        const db = getDB();
+        if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
+        db.groups[event.threadID].antiSticker = args[0] === "on";
+        saveDB(db);
+
+        api.sendMessage(
+            `🎨 𝐀ɴᴛɪ-𝐒ᴛɪᴄᴋᴇʀ: ${db.groups[event.threadID].antiSticker ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
+            event.threadID
+        );
+    },
+
+    // ==================== 🎬 ANTI-GIF ====================
+    antiGif: async (api, event, args, config) => {
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
+
+        const db = getDB();
+        if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
+        db.groups[event.threadID].antiGif = args[0] === "on";
+        saveDB(db);
+
+        api.sendMessage(
+            `🎬 𝐀ɴᴛɪ-𝐆ɪꜰ: ${db.groups[event.threadID].antiGif ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
+            event.threadID
+        );
+    },
+
+    // ==================== 🔠 ANTI-CAPS ====================
     capslock: async (api, event, args, config) => {
-        const { hasPermission, permissionDenied } = require('../utils');
-        if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
 
         const db = getDB();
         if (!db.security[event.threadID]) db.security[event.threadID] = {};
         db.security[event.threadID].capslock = args[0] === "on";
         saveDB(db);
 
-        api.sendMessage(`🔠 𝐀ɴᴛɪ-𝐂ᴀᴘꜱ: ${db.security[event.threadID].capslock ? "ON ✅" : "OFF ❌"}${timeFooter()}`, event.threadID);
+        api.sendMessage(
+            `🔠 𝐀ɴᴛɪ-𝐂ᴀᴘꜱ: ${db.security[event.threadID].capslock ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
+            event.threadID
+        );
     },
 
+    // ==================== 📊 SECURITY LOG ====================
     securitylog: async (api, event, args, config) => {
-        const { hasPermission, permissionDenied } = require('../utils');
-        if (!(await hasPermission(api, event, config, "groupadmin"))) return permissionDenied(api, event, "groupadmin");
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
 
         const db = getDB();
         const logs = db.groups[event.threadID]?.modLog || [];
@@ -249,5 +367,55 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
         }
         msg += `\n━━━━━━━━━━━━━━━━━━━━━━━━\n📊 𝐓ᴏᴛᴀʟ: ${logs.length}${timeFooter()}`;
         api.sendMessage(msg, event.threadID);
+    },
+
+    // ==================== 🔄 RESET WARNINGS ====================
+    resetWarns: async (api, event, args, config) => {
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
+
+        const db = getDB();
+        const targetID = event.mentions && Object.keys(event.mentions)[0];
+        const tid = event.threadID;
+
+        if (!targetID) {
+            return api.sendMessage(
+                `⚠️ 𝐔ꜱᴀɢᴇ: resetwarns @user${timeFooter()}`,
+                tid
+            );
+        }
+
+        if (!db.warnings[tid]) db.warnings[tid] = {};
+        db.warnings[tid][targetID] = 0;
+        saveDB(db);
+
+        const targetName = event.mentions[targetID];
+        api.sendMessage(
+            `✅ 𝐖ᴀʀɴɪɴɢꜱ 𝐑ᴇꜱᴇᴛ
+━━━━━━━━━━━━━━━━━━━━━━━━
+👤 ${targetName}
+📊 𝐍ᴇᴡ 𝐖ᴀʀɴɪɴɢꜱ: 0
+━━━━━━━━━━━━━━━━━━━━━━━━
+🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`,
+            tid
+        );
+    },
+
+    // ==================== 📊 MY WARNS ====================
+    myWarns: async (api, event, args, config) => {
+        const db = getDB();
+        const tid = event.threadID;
+        const sid = event.senderID;
+        const count = db.warnings?.[tid]?.[sid] || 0;
+        const limit = db.groups?.[tid]?.warnLimit || 3;
+
+        api.sendMessage(
+            `📊 𝐘ᴏᴜʀ 𝐖ᴀʀɴɪɴɢꜱ
+━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ 𝐖ᴀʀɴɪɴɢ: ${count}/${limit}
+━━━━━━━━━━━━━━━━━━━━━━━━
+🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`,
+            tid
+        );
     }
 };
