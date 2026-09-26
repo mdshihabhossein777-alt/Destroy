@@ -2,15 +2,11 @@ const {
     getDB, saveDB, timeFooter, sleep, getUserRole
 } = require('../utils');
 
-// ==================== ✅ Safe Fallback Imports ====================
 const utils = require('../utils');
 
 const hasPermission = typeof utils.hasPermission === 'function'
     ? utils.hasPermission
-    : async (api, event, config, role) => {
-        console.log(`⚠️ hasPermission missing — allowing ${role}`);
-        return true;
-    };
+    : async () => true;
 
 const permissionDenied = typeof utils.permissionDenied === 'function'
     ? utils.permissionDenied
@@ -21,10 +17,11 @@ const permissionDenied = typeof utils.permissionDenied === 'function'
         );
     };
 
+// ==================== 🕒 24 HOURS CONSTANT ====================
+const GUARDIAN_DURATION = 24 * 60 * 60 * 1000; // 24 hours in ms
+
 module.exports = {
     // ==================== ✅ index.js এর জন্য alias ====================
-    // ⚠️ এই alias শুধু index.js এর `guardian(api, event, config)` কল handle করে
-    // এটা কোনো sub-command (on/off/status) handle করে না
     guardian: async (api, event, config) => {
         return module.exports.handleGuardian(api, event, config);
     },
@@ -37,8 +34,18 @@ module.exports = {
             const sid = event.senderID;
             const msg = event.body || "";
 
-            // Guardian OFF থাকলে কিছুই করবে না
             if (!db.security?.[tid]?.guardian) return false;
+
+            // 🕒 24 ঘণ্টা শেষ হলে auto OFF
+            if (db.security[tid].guardianExpiry && Date.now() > db.security[tid].guardianExpiry) {
+                db.security[tid].guardian = false;
+                saveDB(db);
+                api.sendMessage(
+                    `⏰ 𝐆ᴜᴀʀᴅɪᴀɴ 𝐄xᴘɪʀᴇᴅ!\n🛡️ 24 ʜᴏᴜʀꜱ ᴄᴏᴍᴘʟᴇᴛᴇᴅ\n💤 Guardian OFF${timeFooter()}`,
+                    tid
+                );
+                return false;
+            }
 
             // Admin/Owner Check
             const senderRole = await getUserRole(api, event, config);
@@ -47,6 +54,8 @@ module.exports = {
             const isGroupAdmin = senderRole === "groupadmin";
             const isAdmin = isOwner || isBotAdmin || isGroupAdmin;
 
+            // ⚠️ Group Admin দের ignore (owner + botadmin এখনো check হবে)
+            // চাইলে নিচের লাইন comment করে দিলে admin-দেরও warn করবে
             if (isAdmin) return false;
 
             if (!db.groups[tid]) db.groups[tid] = {};
@@ -62,7 +71,7 @@ module.exports = {
 
             // ১. ANTI-LINK
             if (grp.antiLink) {
-                const linkRegex = /(https?:\/\/|www\.|\.com|\.net|\.org|\.xyz|\.live|\.me|fb\.me|bit\.ly|tinyurl)/gi;
+                const linkRegex = /(https?:\/\/|www\.|\.com|\.net|\.org|\.xyz|\.live|\.me|fb\.me|bit\.ly|tinyurl|t\.me|wa\.me)/gi;
                 if (linkRegex.test(msg)) {
                     violation = "🔗 𝐋ɪɴᴋ 𝐍ᴏᴛ 𝐀ʟʟᴏᴡᴇᴅ";
                     violationType = "antiLink";
@@ -71,7 +80,7 @@ module.exports = {
 
             // ২. ANTI-GALI
             if (!violation && grp.antiGali) {
-                const badWords = /(madarchod|bhenchod|fuck|shit|bastard|harami|kutta|kutir|suorer|shala|shali|khanki|magi|choda|chod|bhosdi|gandu|gaandu|bkl|mkc|gali)/gi;
+                const badWords = /(madarchod|bhenchod|fuck|shit|bastard|harami|kutta|kutir|suorer|shala|shali|khanki|magi|choda|chod|bhosdi|gandu|gaandu|bkl|mkc|gali|mader|bho$di|bhosri|randi|rand|dhon|dhonk|chud|chudir|choda|bara|bara|nunu|kutta|kutti|haramjada|haramzada|jahil|besha|besharam|kutta|kutir|bokachoda|bokachudi|madar|bap|baap)/gi;
                 if (badWords.test(msg)) {
                     violation = "🤬 𝐁ᴀᴅ 𝐖ᴏʀᴅꜱ 𝐍ᴏᴛ 𝐀ʟʟᴏᴡᴇᴅ";
                     violationType = "antiGali";
@@ -124,14 +133,17 @@ module.exports = {
 
             // 🚫 লঙ্ঘন হলে
             if (violation) {
+                // ১. মেসেজ ডিলিট
                 api.unsendMessage(event.messageID, (err) => {
                     if (err) console.log("Delete failed:", err.message);
                 });
 
+                // ২. ওয়ার্নিং বাড়ান
                 db.warnings[tid][sid] = (db.warnings[tid][sid] || 0) + 1;
                 const count = db.warnings[tid][sid];
                 const warnLimit = grp.warnLimit || 3;
 
+                // ৩. লগ সেভ
                 if (!db.groups[tid].modLog) db.groups[tid].modLog = [];
                 db.groups[tid].modLog.push(
                     `[${new Date().toLocaleString('en-GB', { timeZone: 'Asia/Dhaka' })}] ${violationType} by ${sid}`
@@ -142,6 +154,7 @@ module.exports = {
 
                 saveDB(db);
 
+                // ৪. ওয়ার্নিং মেসেজ
                 const userInfo = await new Promise(r =>
                     api.getUserInfo(sid, (e, ret) => r(e ? null : ret[sid]))
                 );
@@ -162,6 +175,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
                     mentions: [{ tag: userName, id: sid }]
                 }, tid);
 
+                // ৫. ওয়ার্ন লিমিট শেষ হলে কিক
                 if (count >= warnLimit) {
                     await sleep(3000);
                     api.removeUserFromGroup(sid, tid, (err) => {
@@ -192,12 +206,11 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
         }
     },
 
-    // ==================== 🛡️ /guardianon ====================
+    // ==================== 🛡️ /guardianon (24h) ====================
     guardianon: async (api, event, args, config) => {
         try {
             console.log("🛡️ guardianOn called by", event.senderID);
             if (!(await hasPermission(api, event, config, "groupadmin"))) {
-                console.log("❌ Permission denied");
                 return permissionDenied(api, event, "groupadmin");
             }
 
@@ -205,16 +218,26 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
             if (!db.security[event.threadID]) db.security[event.threadID] = {};
             if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
 
+            const expiry = Date.now() + GUARDIAN_DURATION;
             db.security[event.threadID].guardian = true;
+            db.security[event.threadID].guardianExpiry = expiry;
             db.groups[event.threadID].antiLink = true;
             db.groups[event.threadID].antiGali = true;
             db.groups[event.threadID].antiPhone = true;
             db.groups[event.threadID].antiSticker = true;
             db.groups[event.threadID].antiGif = true;
             db.security[event.threadID].capslock = true;
+            if (!db.groups[event.threadID].warnLimit) {
+                db.groups[event.threadID].warnLimit = 3;
+            }
 
             saveDB(db);
-            console.log("✅ Guardian ON saved to DB");
+            console.log("✅ Guardian ON saved to DB. Expires:", new Date(expiry).toLocaleString());
+
+            const timeStr = new Date(expiry).toLocaleString('en-GB', {
+                timeZone: 'Asia/Dhaka',
+                hour12: true
+            });
 
             api.sendMessage(
                 `🛡️ 𝐆ᴜᴀʀᴅɪᴀɴ 𝐌ᴏᴅᴇ: ON ✅
@@ -229,26 +252,27 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
 🎨 𝐀ɴᴛɪ-𝐒ᴛɪᴄᴋᴇʀ: ON ✅
 🎬 𝐀ɴᴛɪ-𝐆ɪꜰ: ON ✅
 ━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ 𝐄xᴘɪʀᴇꜱ: ${timeStr}
+🕒 𝐃ᴜʀᴀᴛɪᴏɴ: 24 𝐇ᴏᴜʀꜱ
+━━━━━━━━━━━━━━━━━━━━━━━━
 🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`,
                 event.threadID
             );
         } catch (err) {
             console.error("guardianOn error:", err.message);
-            console.error(err.stack);
         }
     },
 
     // ==================== 🛡️ /guardianoff ====================
     guardianoff: async (api, event, args, config) => {
         try {
-            console.log("🛡️ guardianOff called by", event.senderID);
-            if (!(await hasPermission(api, event, config, "groupadmin"))) {
+            if (!(await hasPermission(api, event, config, "groupadmin")))
                 return permissionDenied(api, event, "groupadmin");
-            }
 
             const db = getDB();
             if (!db.security[event.threadID]) db.security[event.threadID] = {};
             db.security[event.threadID].guardian = false;
+            db.security[event.threadID].guardianExpiry = null;
             saveDB(db);
 
             api.sendMessage(
@@ -267,6 +291,18 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
             const sec = db.security[event.threadID] || {};
             const grp = db.groups[event.threadID] || {};
 
+            let expiryInfo = "N/A";
+            if (sec.guardianExpiry) {
+                const remaining = sec.guardianExpiry - Date.now();
+                if (remaining > 0) {
+                    const hours = Math.floor(remaining / (60 * 60 * 1000));
+                    const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+                    expiryInfo = `${hours}h ${mins}m ʙUᴀᴋɪ`;
+                } else {
+                    expiryInfo = "ᴇxᴘɪʀᴇᴅ";
+                }
+            }
+
             const msg = `🛡️ 𝐆ᴜᴀʀᴅɪᴀɴ 𝐒ᴛᴀᴛᴜꜱ
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🤖 𝐆ᴜᴀʀᴅɪᴀɴ: ${sec.guardian ? "ON ✅" : "OFF ❌"}
@@ -277,6 +313,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
 🎨 𝐀ɴᴛɪ-𝐒ᴛɪᴄᴋᴇʀ: ${grp.antiSticker ? "ON ✅" : "OFF ❌"}
 🎬 𝐀ɴᴛɪ-𝐆ɪꜰ: ${grp.antiGif ? "ON ✅" : "OFF ❌"}
 📊 𝐖ᴀʀɴ 𝐋ɪᴍɪᴛ: ${grp.warnLimit || 3}
+⏰ 𝐄xᴘɪʀʏ: ${expiryInfo}
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`;
 
@@ -299,9 +336,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
                 `🔗 𝐀ɴᴛɪ-𝐋ɪɴᴋ: ${db.groups[event.threadID].antiLink ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
                 event.threadID
             );
-        } catch (err) {
-            console.error("antiLink error:", err.message);
-        }
+        } catch (err) { console.error("antiLink error:", err.message); }
     },
 
     // ==================== 🤬 /antigali ====================
@@ -317,9 +352,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
                 `🤬 𝐀ɴᴛɪ-𝐆ᴀʟɪ: ${db.groups[event.threadID].antiGali ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
                 event.threadID
             );
-        } catch (err) {
-            console.error("antiGali error:", err.message);
-        }
+        } catch (err) { console.error("antiGali error:", err.message); }
     },
 
     // ==================== 📱 /antiphone ====================
@@ -335,9 +368,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
                 `📱 𝐀ɴᴛɪ-𝐏ʜᴏɴᴇ: ${db.groups[event.threadID].antiPhone ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
                 event.threadID
             );
-        } catch (err) {
-            console.error("antiPhone error:", err.message);
-        }
+        } catch (err) { console.error("antiPhone error:", err.message); }
     },
 
     // ==================== 🎨 /antisticker ====================
@@ -353,9 +384,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
                 `🎨 𝐀ɴᴛɪ-𝐒ᴛɪᴄᴋᴇʀ: ${db.groups[event.threadID].antiSticker ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
                 event.threadID
             );
-        } catch (err) {
-            console.error("antiSticker error:", err.message);
-        }
+        } catch (err) { console.error("antiSticker error:", err.message); }
     },
 
     // ==================== 🎬 /antigif ====================
@@ -371,9 +400,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
                 `🎬 𝐀ɴᴛɪ-𝐆ɪꜰ: ${db.groups[event.threadID].antiGif ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
                 event.threadID
             );
-        } catch (err) {
-            console.error("antiGif error:", err.message);
-        }
+        } catch (err) { console.error("antiGif error:", err.message); }
     },
 
     // ==================== 🔠 /capslock ====================
@@ -389,9 +416,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
                 `🔠 𝐀ɴᴛɪ-𝐂ᴀᴘꜱ: ${db.security[event.threadID].capslock ? "ON ✅" : "OFF ❌"}${timeFooter()}`,
                 event.threadID
             );
-        } catch (err) {
-            console.error("capslock error:", err.message);
-        }
+        } catch (err) { console.error("capslock error:", err.message); }
     },
 
     // ==================== ⚙️ /warnlimit ====================
@@ -401,22 +426,14 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
                 return permissionDenied(api, event, "groupadmin");
             const num = parseInt(args[0]);
             if (!num || num < 1 || num > 10) {
-                return api.sendMessage(
-                    `⚠️ 𝐔ꜱᴀɢᴇ: warnlimit <1-10>${timeFooter()}`,
-                    event.threadID
-                );
+                return api.sendMessage(`⚠️ 𝐔ꜱᴀɢᴇ: warnlimit <1-10>${timeFooter()}`, event.threadID);
             }
             const db = getDB();
             if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
             db.groups[event.threadID].warnLimit = num;
             saveDB(db);
-            api.sendMessage(
-                `📊 𝐖ᴀʀɴ 𝐋ɪᴍɪᴛ: ${num} ✅${timeFooter()}`,
-                event.threadID
-            );
-        } catch (err) {
-            console.error("warnLimit error:", err.message);
-        }
+            api.sendMessage(`📊 𝐖ᴀʀɴ 𝐋ɪᴍɪᴛ: ${num} ✅${timeFooter()}`, event.threadID);
+        } catch (err) { console.error("warnLimit error:", err.message); }
     },
 
     // ==================== 📊 /securitylog ====================
@@ -427,16 +444,11 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
             const db = getDB();
             const logs = db.groups[event.threadID]?.modLog || [];
             let msg = `📊 𝐒ᴇᴄᴜʀɪᴛʏ 𝐋ᴏɢ\n━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-            if (logs.length === 0) {
-                msg += `✅ ɴᴏ ᴠɪᴏʟᴀᴛɪᴏɴꜱ ʀᴇᴄᴏʀᴅᴇᴅ`;
-            } else {
-                for (const log of logs.slice(-15)) msg += `${log}\n`;
-            }
+            if (logs.length === 0) msg += `✅ ɴᴏ ᴠɪᴏʟᴀᴛɪᴏɴꜱ ʀᴇᴄᴏʀᴅᴇᴅ`;
+            else for (const log of logs.slice(-15)) msg += `${log}\n`;
             msg += `\n━━━━━━━━━━━━━━━━━━━━━━━━\n📊 𝐓ᴏᴛᴀʟ: ${logs.length}${timeFooter()}`;
             api.sendMessage(msg, event.threadID);
-        } catch (err) {
-            console.error("securitylog error:", err.message);
-        }
+        } catch (err) { console.error("securitylog error:", err.message); }
     },
 
     // ==================== 🔄 /resetwarns ====================
@@ -447,21 +459,16 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
             const db = getDB();
             const targetID = event.mentions && Object.keys(event.mentions)[0];
             const tid = event.threadID;
-            if (!targetID) {
-                return api.sendMessage(`⚠️ 𝐔ꜱᴀɢᴇ: resetwarns @user${timeFooter()}`, tid);
-            }
+            if (!targetID) return api.sendMessage(`⚠️ 𝐔ꜱᴀɢᴇ: resetwarns @user${timeFooter()}`, tid);
             if (!db.warnings) db.warnings = {};
             if (!db.warnings[tid]) db.warnings[tid] = {};
             db.warnings[tid][targetID] = 0;
             saveDB(db);
-            const targetName = event.mentions[targetID];
             api.sendMessage(
-                `✅ 𝐖ᴀʀɴɪɴɢꜱ 𝐑ᴇꜱᴇᴛ\n━━━━━━━━━━━━━━━━━━━━━━━━\n👤 ${targetName}\n📊 𝐍ᴇᴡ 𝐖ᴀʀɴɪɴɢꜱ: 0\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`,
+                `✅ 𝐖ᴀʀɴɪɴɢꜱ 𝐑ᴇꜱᴇᴛ\n👤 ${event.mentions[targetID]}\n📊 ɴᴇᴡ: 0${timeFooter()}`,
                 tid
             );
-        } catch (err) {
-            console.error("resetWarns error:", err.message);
-        }
+        } catch (err) { console.error("resetWarns error:", err.message); }
     },
 
     // ==================== 📊 /mywarns ====================
@@ -473,11 +480,9 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
             const count = db.warnings?.[tid]?.[sid] || 0;
             const limit = db.groups?.[tid]?.warnLimit || 3;
             api.sendMessage(
-                `📊 𝐘ᴏᴜʀ 𝐖ᴀʀɴɪɴɢꜱ\n━━━━━━━━━━━━━━━━━━━━━━━━\n⚠️ 𝐖ᴀʀɴɪɴɢ: ${count}/${limit}\n━━━━━━━━━━━━━━━━━━━━━━━━\n🌸 𝐒𝐀𝐘𝐎𝐍𝐀𝐑𝐀 𝐒𝐘𝐒𝐓ᴇᴍ${timeFooter()}`,
+                `📊 𝐘ᴏᴜʀ 𝐖ᴀʀɴɪɴɢꜱ\n⚠️ ${count}/${limit}${timeFooter()}`,
                 tid
             );
-        } catch (err) {
-            console.error("myWarns error:", err.message);
-        }
+        } catch (err) { console.error("myWarns error:", err.message); }
     }
 };
