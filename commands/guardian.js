@@ -4,8 +4,14 @@ const {
 } = require('../utils');
 
 module.exports = {
+    // ==================== ✅ ALIAS (index.js এর জন্য) ====================
+    // index.js এ `const { guardian } = require('./commands/guardian');` কল করে
+    // তাই এই alias দরকার
+    guardian: async (api, event, config) => {
+        return module.exports.handleGuardian(api, event, config);
+    },
+
     // ==================== 🛡️ REAL-TIME GUARDIAN (Event Handler) ====================
-    // ⚠️ এটি command নয় — main bot file থেকে প্রতিটি message event-এ কল করুন
     handleGuardian: async (api, event, config) => {
         try {
             const db = getDB();
@@ -29,6 +35,7 @@ module.exports = {
             // Safe DB structure
             if (!db.groups[tid]) db.groups[tid] = {};
             if (!db.security[tid]) db.security[tid] = {};
+            if (!db.warnings) db.warnings = {};
             if (!db.warnings[tid]) db.warnings[tid] = {};
 
             const grp = db.groups[tid];
@@ -186,7 +193,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
 
         db.security[event.threadID].guardian = true;
 
-        // ডিফল্ট সব filter ON (চাইলে পরে OFF করতে পারবেন)
+        // ডিফল্ট সব filter ON
         db.groups[event.threadID].antiLink = true;
         db.groups[event.threadID].antiGali = true;
         db.groups[event.threadID].antiPhone = true;
@@ -348,6 +355,30 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
         );
     },
 
+    // ==================== ⚙️ WARN LIMIT SET ====================
+    warnLimit: async (api, event, args, config) => {
+        if (!(await hasPermission(api, event, config, "groupadmin")))
+            return permissionDenied(api, event, "groupadmin");
+
+        const num = parseInt(args[0]);
+        if (!num || num < 1 || num > 10) {
+            return api.sendMessage(
+                `⚠️ 𝐔ꜱᴀɢᴇ: warnlimit <1-10>${timeFooter()}`,
+                event.threadID
+            );
+        }
+
+        const db = getDB();
+        if (!db.groups[event.threadID]) db.groups[event.threadID] = {};
+        db.groups[event.threadID].warnLimit = num;
+        saveDB(db);
+
+        api.sendMessage(
+            `📊 𝐖ᴀʀɴ 𝐋ɪᴍɪᴛ: ${num} ✅${timeFooter()}`,
+            event.threadID
+        );
+    },
+
     // ==================== 📊 SECURITY LOG ====================
     securitylog: async (api, event, args, config) => {
         if (!(await hasPermission(api, event, config, "groupadmin")))
@@ -385,6 +416,7 @@ ${count >= warnLimit ? "🚫 ᴋɪᴄᴋɪɴɢ ɪɴ 3 ꜱᴇᴄᴏɴᴅꜱ..." :
             );
         }
 
+        if (!db.warnings) db.warnings = {};
         if (!db.warnings[tid]) db.warnings[tid] = {};
         db.warnings[tid][targetID] = 0;
         saveDB(db);
