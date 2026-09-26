@@ -327,7 +327,7 @@ module.exports = {
         const msg = `🌸 𝐎ᴡɴᴇʀ 𝐈ɴꜰᴏ
 ━━━━━━━━━━━━━━━━━━━━━━━━
 👤 𝐍ᴀᴍᴇ: Ariyan Shihab
-🌹 𝐍ɪᴄᴋ: কীট গোলাপ
+🌹 𝐍ɪᴄᴋ: sexy shihab
 🎂 𝐀ɢᴇ: 21+
 📚 𝐏ʀᴏꜰᴇꜱꜱɪᴏɴ: Student
 📍 𝐋ᴏᴄᴀᴛɪᴏɴ: Naoagon, BD
