@@ -134,9 +134,14 @@ login({ appState }, (err, api) => {
             }
 
             // ==================== 🛡️ GUARDIAN CHECK ====================
+            // ✅ FIX 1: try/catch যোগ করা হয়েছে যাতে guardian error main loop crash না করে
             if (event.type === "message" && event.body && tid) {
-                const isViolation = await guardian(api, event, config);
-                if (isViolation) return; // লঙ্ঘন হলে পরের প্রসেসিং বন্ধ
+                try {
+                    const isViolation = await guardian(api, event, config);
+                    if (isViolation) return; // লঙ্ঘন হলে পরের প্রসেসিং বন্ধ
+                } catch (gErr) {
+                    console.error("⚠️ Guardian check error:", gErr.message);
+                }
             }
 
             if (tid && db.security?.[tid]?.botOff && event.senderID !== config.owner) return;
@@ -193,10 +198,13 @@ login({ appState }, (err, api) => {
                         const commandDelay = await getCommandDelay(cmd);
                         await sleep(commandDelay);
                         
+                        // ✅ FIX 2: await যোগ করা হয়েছে যাতে async command এর error ধরা পড়ে
+                        // ✅ FIX 3: e.stack log করা হয়েছে যাতে exact error location দেখা যায়
                         try {
-                            commands[cmd](api, event, args, config);
+                            await commands[cmd](api, event, args, config);
                         } catch (e) {
                             console.error(`❌ ${cmd} error:`, e.message);
+                            console.error(e.stack);
                         }
                     } else {
                         await sleep(getRandomDelay(800, 2000));
